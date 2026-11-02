@@ -4,9 +4,9 @@
   "version": "0.6.0",
   "tag": "v0.6.0",
   "asset": "dsh-startup-elisa-0.6.0.tgz",
-  "size": 2777224,
-  "sha256": "6f22cde794d0879d90e627cf18b49a5a86ddfdfe0c80185f330fb1b5892bc851",
-  "sha512": "1716e14c7e595ad51542f4f6003096fde8211a645aa03c59b969021b5d2053cda45ec75be10010169e873f579b4197a4aaa19d509c5c9bbd36f728bbc1ffb555",
+  "size": 2776625,
+  "sha256": "03847d4d9bdf0e5723437b19f835536bf42c31e86e912b2f207bb90c27fd10a4",
+  "sha512": "e7f4835b1e23fbb7a82c223b75ae9be0af2948eb8c10387b8b243f7d73de9bd81bd43d41f3ed9a7de4e7be464aca16ad518a0616da4d136e82098ee257cb1914",
   "url": "https://github.com/QIFANAI/dsh-startup-elisa/releases/download/v0.6.0/dsh-startup-elisa-0.6.0.tgz",
   "mediaIncluded": false,
   "install": {

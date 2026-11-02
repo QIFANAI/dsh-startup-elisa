@@ -72,22 +72,30 @@ function trackedFiles () {
 }
 
 /**
- * source 模式从 git HEAD 导出到暂存目录：保证 LF 行尾与已提交内容一致，
- * 工作区里躺着的第三方素材/未跟踪文件不会混进公开包。
+ * source 模式只复制 git 已跟踪文件，并把文本行尾统一成 LF（与 git blob 一致）：
+ * 工作区里躺着的第三方素材/未跟踪文件不会混进公开包，Windows 本地构建与
+ * Linux CI 的产物也能保持一致。
  */
 function exportHead (stage) {
-  const tarPath = path.join(os.tmpdir(), `dsh-elisa-head-${process.pid}.tar`)
-  try {
-    execFileSync('git', ['archive', '--format=tar', '-o', tarPath, 'HEAD'], {
-      cwd: ROOT,
-      stdio: ['ignore', 'pipe', 'inherit'],
-    })
-    execFileSync('tar', ['-xf', tarPath, '-C', stage], { stdio: 'inherit' })
-  } finally {
-    fs.rmSync(tarPath, { force: true })
+  const files = trackedFiles()
+  if (files.length === 0) {
+    throw new Error('git 里还没有跟踪文件；先 git add / commit，再构建 source 包')
+  }
+  const binary = /\.(?:png|jpe?g|webp|gif|wav|mp3|mp4|webm|woff2?|zip|tgz)$/i
+  for (const rel of files) {
+    const src = path.join(ROOT, rel)
+    if (!fs.existsSync(src) || !fs.statSync(src).isFile()) continue
+    const dst = path.join(stage, rel)
+    fs.mkdirSync(path.dirname(dst), { recursive: true })
+    const raw = fs.readFileSync(src)
+    const out = binary.test(rel) || raw.includes(0)
+      ? raw
+      : Buffer.from(raw.toString('utf8').replace(/\r\n/g, '\n'), 'utf8')
+    fs.writeFileSync(dst, out)
+    fs.utimesSync(dst, FIXED_TIME, FIXED_TIME)
   }
   if (!fs.existsSync(path.join(stage, 'package.json'))) {
-    throw new Error('git HEAD 里没有 package.json；先提交仓库再构建')
+    throw new Error('git 里没有 package.json；先提交仓库再构建')
   }
 }
 
@@ -164,9 +172,6 @@ function main () {
   const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-elisa-pack-'))
   try {
     if (opts.mode === 'source') {
-      if (trackedFiles().length === 0) {
-        throw new Error('git 里还没有跟踪文件；先 git add / commit，再构建 source 包')
-      }
       exportHead(stage)
     } else {
       copyIntoStage(stage, packageFilesFromDryRun())
