@@ -44,7 +44,6 @@ lib/assets/*.webp
 lib/assets/*.jpg
 lib/assets/*.png
 !lib/assets/README.md
-!lib/assets/manifest.example.json
 
 # ── 系统与编辑器 ──────────────────────────────────────────────
 .DS_Store
