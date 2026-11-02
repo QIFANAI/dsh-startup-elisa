@@ -1,0 +1,563 @@
+{
+  "version": "0.1.0-p2",
+  "generated_at": "2026-10-28T14:09:24+08:00",
+  "source": {
+    "scene_pkg": "<维护者本机 Wallpaper Engine 场景路径，未随仓库分发>",
+    "renderer": "we-static-frame (build-time only)",
+    "license": "Steam Workshop 第三方素材；仅本机自用，禁止售卖/公开分发人物渲染与海报"
+  },
+  "video": {
+    "file": "hero-loop.mp4",
+    "bytes": 4085849,
+    "sha256": "209b3ad0dee3ba3948af34391264355f726d10d54313aa2e122364dea7221e4f",
+    "duration": 6.0,
+    "fps": 24,
+    "frames": 144,
+    "width": 1920,
+    "height": 1080,
+    "codec": "h264",
+    "pix_fmt": "yuv420p",
+    "crf": 20
+  },
+  "posters": {
+    "hero": {
+      "file": "hero-poster.webp",
+      "size": [
+        2560,
+        1440
+      ],
+      "bytes": 392192,
+      "sha256": "c09ce36294042d79dd4398e087821c662792571c0f4ce38770ffd28e76f0b80b"
+    },
+    "archive": {
+      "file": "archive-poster.webp",
+      "size": [
+        1920,
+        1080
+      ],
+      "bytes": 196474,
+      "sha256": "eeae791a5c5299eb57d43839916ceaa9575961e2f216bd1697dd369680988692"
+    }
+  },
+  "layers": [
+    {
+      "name": "wing_1",
+      "file": "layers/wing_1.webp",
+      "source": "翅膀1.png",
+      "original": [
+        4068,
+        1979
+      ],
+      "size": [
+        1024,
+        498
+      ],
+      "blend": "screen",
+      "usage": "人物后方翼光 / 视差层",
+      "max_css_px": 1024,
+      "bytes": 128820,
+      "sha256": "6bee63e21e359c257a47d299d8320869ae6744e25a548f2a0188b6ecca1b70e7"
+    },
+    {
+      "name": "wing_2",
+      "file": "layers/wing_2.webp",
+      "source": "翅膀2.png",
+      "original": [
+        3756,
+        1936
+      ],
+      "size": [
+        1024,
+        528
+      ],
+      "blend": "screen",
+      "usage": "第二层翼光",
+      "max_css_px": 1024,
+      "bytes": 93658,
+      "sha256": "f635da3c58544c4cbc41ab0b630af02242df1114b96e7d3228c73f739b73a647"
+    },
+    {
+      "name": "feather_1",
+      "file": "layers/feather_1.webp",
+      "source": "羽毛1.png",
+      "original": [
+        800,
+        667
+      ],
+      "size": [
+        512,
+        427
+      ],
+      "blend": "normal",
+      "usage": "飘落羽毛粒子",
+      "max_css_px": 160,
+      "bytes": 23422,
+      "sha256": "75ea98dcae3d3325cb40d06b345515b3d6acbc46b6d8827b53e2d0c65706f528"
+    },
+    {
+      "name": "feather_2",
+      "file": "layers/feather_2.webp",
+      "source": "羽毛2.png",
+      "original": [
+        800,
+        249
+      ],
+      "size": [
+        512,
+        159
+      ],
+      "blend": "normal",
+      "usage": "长条羽毛粒子",
+      "max_css_px": 220,
+      "bytes": 9314,
+      "sha256": "1e1cb821c739dcf94ad3af330d6d462550353f528d687f45a8512cbb7bacd1fb"
+    },
+    {
+      "name": "star",
+      "file": "layers/star.webp",
+      "source": "星星.png",
+      "original": [
+        496,
+        669
+      ],
+      "size": [
+        380,
+        512
+      ],
+      "blend": "screen",
+      "usage": "漂浮光点",
+      "max_css_px": 120,
+      "bytes": 9336,
+      "sha256": "9337fc316376abeecb9deda473376d9602e45742dd88bbff31b66c40be6621be"
+    },
+    {
+      "name": "guide_1",
+      "file": "layers/guide_1.webp",
+      "source": "引导线.png",
+      "original": [
+        830,
+        1468
+      ],
+      "size": [
+        434,
+        768
+      ],
+      "blend": "screen",
+      "usage": "HUD 拉向人物的红色数据线",
+      "max_css_px": 520,
+      "bytes": 40294,
+      "sha256": "d48a926150a9f52121a169b08fbba1486bae8785c6c474e82a36a077d744a6a4"
+    },
+    {
+      "name": "guide_2",
+      "file": "layers/guide_2.webp",
+      "source": "引导线2.png",
+      "original": [
+        1443,
+        537
+      ],
+      "size": [
+        768,
+        286
+      ],
+      "blend": "screen",
+      "usage": "横向数据线",
+      "max_css_px": 640,
+      "bytes": 19874,
+      "sha256": "a3bd80a1c1fe140e831c9d8037f67a363a817590d9ec0ae1f4317e8b875a9b7f"
+    },
+    {
+      "name": "guide_3",
+      "file": "layers/guide_3.webp",
+      "source": "引导线3.png",
+      "original": [
+        770,
+        744
+      ],
+      "size": [
+        512,
+        495
+      ],
+      "blend": "screen",
+      "usage": "短数据线",
+      "max_css_px": 420,
+      "bytes": 12946,
+      "sha256": "95cdd5ef3e0f74eca094a407baf4604a5a5f49efa1224ca10a8c9b2414808faf"
+    },
+    {
+      "name": "spiral_1",
+      "file": "layers/spiral_1.webp",
+      "source": "螺旋1.png",
+      "original": [
+        809,
+        541
+      ],
+      "size": [
+        512,
+        342
+      ],
+      "blend": "screen",
+      "usage": "SYNC 涡流",
+      "max_css_px": 420,
+      "bytes": 30094,
+      "sha256": "41929ddf05ccf11a8acd0e4cd5d80dff315816881bd996ee96b4908dd6f11d8b"
+    },
+    {
+      "name": "spiral_2",
+      "file": "layers/spiral_2.webp",
+      "source": "螺旋2.png",
+      "original": [
+        300,
+        297
+      ],
+      "size": [
+        300,
+        297
+      ],
+      "blend": "screen",
+      "usage": "小涡流",
+      "max_css_px": 260,
+      "bytes": 27456,
+      "sha256": "f00b62c6488095030739509d58dd225ee5c9ccb78d22357464ad23b561b7d93d"
+    },
+    {
+      "name": "spiral_line",
+      "file": "layers/spiral_line.webp",
+      "source": "螺旋线.png",
+      "original": [
+        1197,
+        832
+      ],
+      "size": [
+        768,
+        534
+      ],
+      "blend": "screen",
+      "usage": "螺旋轨迹线",
+      "max_css_px": 700,
+      "bytes": 7532,
+      "sha256": "253983fee2353e547fb83327eab46d9219fc94642de1815c0b6af303b9efefa6"
+    },
+    {
+      "name": "halo",
+      "file": "layers/halo.webp",
+      "source": "光环.png",
+      "original": [
+        1293,
+        491
+      ],
+      "size": [
+        768,
+        292
+      ],
+      "blend": "screen",
+      "usage": "同步环 / SYNC 外圈",
+      "max_css_px": 560,
+      "bytes": 30896,
+      "sha256": "d11ea8e495e2bcd29128db6e1347d81bf253655ba6dfe3b5e5e8e721170d0ffd"
+    },
+    {
+      "name": "sword_flare",
+      "file": "layers/sword_flare.webp",
+      "source": "剑花.png",
+      "original": [
+        1062,
+        1164
+      ],
+      "size": [
+        467,
+        512
+      ],
+      "blend": "screen",
+      "usage": "剑光扫过遮罩",
+      "max_css_px": 360,
+      "bytes": 14098,
+      "sha256": "d2e4cacf51c0c9adb544f652f8e1f035a5a3650579090d2a40e259555ea49e31"
+    }
+  ],
+  "timeline": {
+    "video_duration": 6.0,
+    "playback_rate": 0.85,
+    "hold_after_video": 0.34,
+    "total": 7.4,
+    "phases": [
+      {
+        "t": 0.0,
+        "label": "COLD BOOT",
+        "sync": 4
+      },
+      {
+        "t": 0.9,
+        "label": "ASSET SCAN",
+        "sync": 12
+      },
+      {
+        "t": 1.6,
+        "label": "SUBJECT RECOGNIZED",
+        "sync": 38
+      },
+      {
+        "t": 2.8,
+        "label": "ELISA",
+        "sync": 62
+      },
+      {
+        "t": 4.2,
+        "label": "HANDSHAKE",
+        "sync": 74
+      },
+      {
+        "t": 5.0,
+        "label": "HANDSHAKE OK",
+        "sync": 88
+      },
+      {
+        "t": 6.4,
+        "label": "HARNESS ONLINE",
+        "sync": 100
+      }
+    ]
+  },
+  "checks": {
+    "status": "p2-verified",
+    "verified_at": "2026-10-28T07:32:01.854Z",
+    "seam_before": {
+      "median_mean_abs": 1.1221,
+      "max_mean_abs": 3.0159,
+      "max_pair": "071->072",
+      "boundaries": [
+        {
+          "pair": "035->036",
+          "mean_abs": 2.2223,
+          "max": 119,
+          "p999": 84
+        },
+        {
+          "pair": "071->072",
+          "mean_abs": 3.0159,
+          "max": 119,
+          "p999": 90
+        },
+        {
+          "pair": "107->108",
+          "mean_abs": 2.212,
+          "max": 116,
+          "p999": 85
+        }
+      ]
+    },
+    "seam_after": {
+      "median_mean_abs": 1.1223,
+      "max_mean_abs": 2.341,
+      "max_pair": "075->076",
+      "boundaries": [
+        {
+          "pair": "035->036",
+          "mean_abs": 1.4042,
+          "max": 116,
+          "p999": 49
+        },
+        {
+          "pair": "071->072",
+          "mean_abs": 2.327,
+          "max": 117,
+          "p999": 75
+        },
+        {
+          "pair": "107->108",
+          "mean_abs": 1.4992,
+          "max": 114,
+          "p999": 50
+        }
+      ]
+    },
+    "interaction": {
+      "ok": true,
+      "console_errors": 0,
+      "skip_click": {
+        "finished": true,
+        "finishing": true,
+        "videoPaused": true,
+        "videoTime": 0.572,
+        "deskVisible": true,
+        "deskNote": "已跳过启动动画。这里是离线预览占位页。",
+        "hintShown": false,
+        "reduced": false,
+        "startVisible": false
+      },
+      "escape": {
+        "finished": true,
+        "finishing": true,
+        "videoPaused": true,
+        "videoTime": 0.876,
+        "deskVisible": true,
+        "deskNote": "已跳过启动动画。这里是离线预览占位页。",
+        "hintShown": false,
+        "reduced": false,
+        "startVisible": false
+      },
+      "blocked_autoplay_escape": {
+        "finished": true,
+        "finishing": true,
+        "videoPaused": true,
+        "videoTime": 0.843,
+        "deskVisible": true,
+        "deskNote": "已跳过启动动画。这里是离线预览占位页。",
+        "hintShown": false,
+        "reduced": false,
+        "startVisible": false
+      },
+      "any_key": {
+        "finished": true,
+        "finishing": true,
+        "videoPaused": true,
+        "videoTime": 6,
+        "deskVisible": true,
+        "deskNote": "启动层已退出。这里是离线预览占位页。",
+        "hintShown": false,
+        "reduced": false,
+        "startVisible": false
+      },
+      "natural_finish": {
+        "finished": true,
+        "finishing": true,
+        "videoPaused": true,
+        "videoTime": 6,
+        "deskVisible": true,
+        "deskNote": "启动层已退出。这里是离线预览占位页。",
+        "hintShown": false,
+        "reduced": false,
+        "startVisible": false
+      },
+      "replay": {
+        "finished": false,
+        "finishing": false,
+        "videoPaused": false,
+        "videoTime": 0.875,
+        "deskVisible": false,
+        "deskNote": "已跳过启动动画。这里是离线预览占位页。",
+        "hintShown": false,
+        "reduced": false,
+        "startVisible": false
+      },
+      "reduced": {
+        "finished": true,
+        "finishing": true,
+        "videoPaused": true,
+        "videoTime": 0,
+        "deskVisible": true,
+        "deskNote": "启动层已退出。这里是离线预览占位页。",
+        "hintShown": false,
+        "reduced": true,
+        "startVisible": false
+      }
+    },
+    "keyframes": [
+      {
+        "t": 0.2,
+        "file": "p2-key-t02.png",
+        "finished": false,
+        "finishing": false,
+        "videoPaused": true,
+        "videoTime": 0.235,
+        "deskVisible": false,
+        "deskNote": "启动层已退出。这里是离线预览占位页；安装 P3 插件后由真实宿主接管。",
+        "hintShown": false,
+        "reduced": false,
+        "startVisible": false
+      },
+      {
+        "t": 0.9,
+        "file": "p2-key-t09.png",
+        "finished": false,
+        "finishing": false,
+        "videoPaused": true,
+        "videoTime": 1.059,
+        "deskVisible": false,
+        "deskNote": "启动层已退出。这里是离线预览占位页；安装 P3 插件后由真实宿主接管。",
+        "hintShown": false,
+        "reduced": false,
+        "startVisible": false
+      },
+      {
+        "t": 1.6,
+        "file": "p2-key-t16.png",
+        "finished": false,
+        "finishing": false,
+        "videoPaused": true,
+        "videoTime": 1.882,
+        "deskVisible": false,
+        "deskNote": "启动层已退出。这里是离线预览占位页；安装 P3 插件后由真实宿主接管。",
+        "hintShown": false,
+        "reduced": false,
+        "startVisible": false
+      },
+      {
+        "t": 2.8,
+        "file": "p2-key-t28.png",
+        "finished": false,
+        "finishing": false,
+        "videoPaused": true,
+        "videoTime": 3.294,
+        "deskVisible": false,
+        "deskNote": "启动层已退出。这里是离线预览占位页；安装 P3 插件后由真实宿主接管。",
+        "hintShown": false,
+        "reduced": false,
+        "startVisible": false
+      },
+      {
+        "t": 4.2,
+        "file": "p2-key-t42.png",
+        "finished": false,
+        "finishing": false,
+        "videoPaused": true,
+        "videoTime": 4.941,
+        "deskVisible": false,
+        "deskNote": "启动层已退出。这里是离线预览占位页；安装 P3 插件后由真实宿主接管。",
+        "hintShown": false,
+        "reduced": false,
+        "startVisible": false
+      },
+      {
+        "t": 5,
+        "file": "p2-key-t50.png",
+        "finished": false,
+        "finishing": false,
+        "videoPaused": true,
+        "videoTime": 5.882,
+        "deskVisible": false,
+        "deskNote": "启动层已退出。这里是离线预览占位页；安装 P3 插件后由真实宿主接管。",
+        "hintShown": false,
+        "reduced": false,
+        "startVisible": false
+      },
+      {
+        "t": 6.4,
+        "file": "p2-key-t64.png",
+        "finished": false,
+        "finishing": false,
+        "videoPaused": true,
+        "videoTime": 6,
+        "deskVisible": false,
+        "deskNote": "启动层已退出。这里是离线预览占位页；安装 P3 插件后由真实宿主接管。",
+        "hintShown": true,
+        "reduced": false,
+        "startVisible": false
+      }
+    ],
+    "contact_sheet": "_shots-p2/P2-contact-sheet.png",
+    "files": {
+      "preview": {
+        "path": "preview/index.html",
+        "bytes": 30196,
+        "sha256": "2f49833866ffcb5a9592c634e4a1a22eb72407019699645f00fc46eaf6dee648"
+      },
+      "contact_sheet": {
+        "path": "_shots-p2/P2-contact-sheet.png",
+        "bytes": 984975,
+        "sha256": "6e4e73bca684dad775313ae1d0a19dfd7507bd2fb37a361352094a9b7197e38f"
+      }
+    }
+  },
+  "updated_at": "2026-10-28T15:32:22+08:00"
+}

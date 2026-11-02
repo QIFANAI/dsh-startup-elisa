@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "name": "dsh-startup-elisa",
+  "version": "0.6.0",
+  "tag": "v0.6.0",
+  "asset": "dsh-startup-elisa-0.6.0.tgz",
+  "size": 2777224,
+  "sha256": "6f22cde794d0879d90e627cf18b49a5a86ddfdfe0c80185f330fb1b5892bc851",
+  "sha512": "1716e14c7e595ad51542f4f6003096fde8211a645aa03c59b969021b5d2053cda45ec75be10010169e873f579b4197a4aaa19d509c5c9bbd36f728bbc1ffb555",
+  "url": "https://github.com/QIFANAI/dsh-startup-elisa/releases/download/v0.6.0/dsh-startup-elisa-0.6.0.tgz",
+  "mediaIncluded": false,
+  "install": {
+    "node": ">=20",
+    "profiles": [
+      "desktop",
+      "web"
+    ]
+  }
+}

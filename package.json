@@ -1,0 +1,76 @@
+{
+  "name": "dsh-startup-elisa",
+  "version": "0.6.0",
+  "description": "DeepSeek Harness 冷启动动画 + 客户端皮肤插件 v0.6：DSH 黑幕开幕 + ELISA 冷启动 HUD + 交接转场 + 程序化音轨 + 四档皮肤（默认毛玻璃：可调通透度 + 呼吸动态主题背景 + 输入框整圈流动光边框，三套主题）；启动速度可调。公开仓库不含第三方人物素材，缺失时按降级链继续运行。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "deepseek-harness-desktop",
+    "startup",
+    "splash",
+    "boot-animation",
+    "elisa",
+    "skin",
+    "glass",
+    "glassmorphism",
+    "backdrop-filter",
+    "theme",
+    "audio",
+    "breathing",
+    "no-dependencies"
+  ],
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "preview",
+    "test",
+    "docs",
+    "cordis.patch.yml",
+    "README.md",
+    "INSTALL.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "MAINTAIN.md",
+    "THIRD-PARTY-NOTICES.md"
+  ],
+  "scripts": {
+    "test": "node test/smoke-host.mjs && node test/smoke-splash.mjs && node test/smoke-speed.mjs && node test/smoke-client.mjs && node test/smoke-skin.mjs",
+    "check": "node scripts/check-public.mjs",
+    "build": "node scripts/build-release.mjs --mode source",
+    "build:full": "node scripts/build-release.mjs --mode full",
+    "verify:release": "node scripts/build-release.mjs --mode source --verify-manifest",
+    "install:plugin": "node scripts/install.mjs",
+    "pack": "node scripts/build-release.mjs --mode source"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings"
+      ],
+      "platform": "web"
+    }
+  },
+  "author": "沈宏宏 (QIFANAI)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/QIFANAI/dsh-startup-elisa.git"
+  },
+  "homepage": "https://github.com/QIFANAI/dsh-startup-elisa#readme",
+  "bugs": {
+    "url": "https://github.com/QIFANAI/dsh-startup-elisa/issues"
+  }
+}

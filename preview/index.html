@@ -1,0 +1,1697 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>dsh-startup-elisa · ELISA COLD BOOT v0.3</title>
+<style>
+  /* ==========================================================================
+     dsh-startup-elisa · v0.3.0 启动层
+     全屏自适应（无固定舞台缩放）；主时钟 t_anim = wall*SPEED（v0.5，SPEED 由 ?speed= 决定）；视频只作底板。
+     v0.3：ACT 0 黑幕开幕（0–1.15s）+ 契约时间轴（TOTAL 7.20s）+ HUD 退场与幕布合拢。
+     ========================================================================== */
+  :root{
+    --ink:#06060a;
+    --paper:#f2f0ea;
+    --muted:rgba(242,240,234,.56);
+    --faint:rgba(242,240,234,.30);
+    --dim:rgba(242,240,234,.14);
+    --red:#e01b2f;
+    --amber:#ff8a2a;
+    --mx:clamp(28px,4.4vw,96px);
+    --my:clamp(22px,4.2vh,76px);
+    --band:clamp(14px,2.8vmin,34px);
+    --display:clamp(42px,8.2vmin,112px);
+    --label:clamp(10px,.95vmin,13px);
+    --data:clamp(11px,1.05vmin,14px);
+    --sub:clamp(13px,1.35vmin,18px);
+    --fd:"Bahnschrift SemiCondensed","Bahnschrift","Segoe UI Variable Display","Segoe UI",sans-serif;
+    --fm:"Cascadia Mono","Consolas","JetBrains Mono",monospace;
+    --fc:"Microsoft YaHei","Noto Sans SC",sans-serif;
+    /* v0.5 速度模型：--elisa-sp = I = 1/sqrt(SPEED)，只作用于「一次性冲击动作」的
+       animation-duration / animation-delay；叙事层由 JS 主时钟 t_anim = wall*SPEED 天然按 D 缩放；
+       无限循环的氛围/粒子动画不乘该变量（保持 1x，见 _p7/speed-report.md 缩放清单）。 */
+    --elisa-sp:1;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;background:var(--ink);overflow:hidden}
+  body{color:var(--paper);font-family:var(--fd);-webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  ::selection{background:rgba(224,27,47,.4)}
+
+  .stage{position:fixed;inset:0;overflow:hidden;background:var(--ink);isolation:isolate}
+  .splash{position:absolute;inset:0;z-index:2;overflow:hidden;cursor:default}
+  .stage.finishing .splash{opacity:0;transform:scale(1.006);transition:opacity .3s ease,transform .3s ease}
+  .stage.finished .splash{visibility:hidden}
+
+  /* ── 底板：人物视频 / 静帧 ─────────────────────────────────────────── */
+  .plate{
+    position:absolute;inset:0;z-index:1;overflow:hidden;
+    opacity:var(--hop,.03);
+    transform:translate3d(calc(4.6% + var(--camx,0) * 1px),calc(var(--camy,0) * 1px),0) scale(var(--cam,1.045));
+    transform-origin:58% 45%;
+    will-change:opacity,transform;
+    filter:saturate(.94) contrast(1.04);
+  }
+  .plate video,.plate .still{
+    position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:64% 46%;
+    background:#040407;
+  }
+  .plate .still{display:none}
+  body.reduced .plate .still,.plate.no-video .still{display:block}
+  body.reduced .plate video,.plate.no-video video{display:none}
+  body.reduced .plate.blinds{-webkit-mask-image:none;mask-image:none}
+  /* 百叶窗揭幕：--reveal 0→1，黑色条纹由 0 长到一整条 */
+  .plate.blinds{
+    -webkit-mask-image:repeating-linear-gradient(180deg,#000 0 calc(var(--reveal,0) * var(--band)),transparent calc(var(--reveal,0) * var(--band)) var(--band));
+    mask-image:repeating-linear-gradient(180deg,#000 0 calc(var(--reveal,0) * var(--band)),transparent calc(var(--reveal,0) * var(--band)) var(--band));
+  }
+
+  /* ── 调色 / 氛围 ─────────────────────────────────────────────────── */
+  .grade{position:absolute;inset:0;z-index:3;pointer-events:none;
+    background:
+      radial-gradient(58% 46% at 10% 80%,rgba(70,130,255,.055),transparent 72%),
+      linear-gradient(90deg,rgba(6,6,10,.98) 0%,rgba(6,6,10,.94) 24%,rgba(6,6,10,.66) 42%,rgba(6,6,10,.16) 60%,rgba(6,6,10,0) 74%),
+      linear-gradient(0deg,rgba(6,6,10,.74) 0%,rgba(6,6,10,.10) 26%,rgba(6,6,10,0) 44%),
+      linear-gradient(180deg,rgba(6,6,10,.62) 0%,rgba(6,6,10,.06) 22%,rgba(6,6,10,0) 40%);
+  }
+  .bloom{position:absolute;z-index:2;pointer-events:none;left:46%;top:16%;width:80vmin;height:80vmin;
+    background:radial-gradient(closest-side,rgba(224,27,47,.16),rgba(224,27,47,.05) 42%,transparent 72%);
+    filter:blur(30px);opacity:0}  /* opacity 由 JS 按契约时间轴驱动 */
+  .grid{position:absolute;inset:0;z-index:4;pointer-events:none;opacity:.30;
+    background-image:
+      linear-gradient(rgba(255,255,255,.030) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.030) 1px,transparent 1px);
+    background-size:clamp(44px,5.2vmin,72px) clamp(44px,5.2vmin,72px);
+    -webkit-mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.55) 34%,transparent 56%);
+    mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.55) 34%,transparent 56%);
+  }
+  .scanlines{position:absolute;inset:0;z-index:9;pointer-events:none;opacity:.22;
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px 4px);
+    mix-blend-mode:soft-light}
+  .vignette{position:absolute;inset:0;z-index:8;pointer-events:none;
+    background:radial-gradient(ellipse at 60% 44%,transparent 34%,rgba(0,0,0,.46) 76%,rgba(0,0,0,.88) 100%)}
+
+  /* 光扫 / 剑光 / 闪白 */
+  .sweep{position:absolute;inset:-25% -35%;z-index:7;pointer-events:none;opacity:0;
+    background:linear-gradient(103deg,transparent 40%,rgba(224,27,47,.20) 47%,rgba(255,255,255,.34) 50%,rgba(224,27,47,.20) 53%,transparent 60%);
+    mix-blend-mode:screen;transform:translateX(-120%)}
+  .sweep.go{animation:sweepGo calc(1.05s * var(--elisa-sp,1)) cubic-bezier(.22,.7,.3,1) both}
+  @keyframes sweepGo{
+    0%{opacity:0;transform:translateX(-120%)}
+    18%{opacity:.9}
+    100%{opacity:0;transform:translateX(120%)}
+  }
+  .flare{position:absolute;z-index:7;pointer-events:none;left:53%;top:27%;width:62vmin;height:62vmin;
+    margin-left:-31vmin;opacity:0;mix-blend-mode:screen;
+    filter:drop-shadow(0 0 46px rgba(255,120,100,.55))}
+  .flare img{display:block;width:100%;height:100%;object-fit:contain}
+  .stage.cutting .flare{animation:flareGo calc(.5s * var(--elisa-sp,1)) cubic-bezier(.2,.6,.3,1) both}
+  @keyframes flareGo{
+    0%{opacity:0;transform:rotate(-22deg) scale(.4)}
+    18%{opacity:.92;transform:rotate(-22deg) scale(.82)}
+    100%{opacity:0;transform:rotate(-22deg) scale(1.06)}
+  }
+  .blade{position:absolute;z-index:7;pointer-events:none;left:-20%;top:47%;width:140%;height:2px;opacity:0;
+    background:linear-gradient(90deg,transparent,rgba(224,27,47,.85) 28%,#fff 50%,rgba(224,27,47,.85) 72%,transparent);
+    box-shadow:0 0 28px rgba(255,255,255,.65),0 0 70px rgba(224,27,47,.55);transform:rotate(-16deg) scaleX(.1)}
+  .blade::after{content:"";position:absolute;left:0;right:0;top:5px;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.55) 50%,transparent)}
+  .stage.cutting .blade{animation:bladeGo calc(.36s * var(--elisa-sp,1)) cubic-bezier(.4,0,.2,1) both}
+  @keyframes bladeGo{
+    0%{opacity:0;transform:rotate(-16deg) scaleX(.1)}
+    22%{opacity:1;transform:rotate(-16deg) scaleX(.78)}
+    100%{opacity:0;transform:rotate(-16deg) scaleX(1.12)}
+  }
+  .flash{position:absolute;inset:0;z-index:10;pointer-events:none;background:#fff;opacity:0}
+  .stage.cutting .flash{animation:flashGo calc(.34s * var(--elisa-sp,1)) ease-out both}
+  @keyframes flashGo{0%{opacity:0}12%{opacity:.11}100%{opacity:0}}
+  .stage.cutting .plate{filter:saturate(1.15) contrast(1.10) drop-shadow(12px 0 0 rgba(224,27,47,.55)) drop-shadow(-12px 0 0 rgba(80,220,255,.40))}
+
+  /* ── 档案切片（ASSET SCAN 的闪切） ───────────────────────────────── */
+  .poster{position:absolute;inset:0;z-index:5;opacity:0;pointer-events:none;overflow:hidden}
+  .poster .pane{position:absolute;top:10%;bottom:8%;overflow:hidden;
+    background-image:url("../lib/assets/archive-poster.webp");background-size:cover;background-repeat:no-repeat;
+    filter:saturate(.34) contrast(1.18) brightness(.55);
+    box-shadow:0 0 40px rgba(0,0,0,.9);
+    -webkit-mask-image:repeating-linear-gradient(0deg,#000 0 6px,rgba(0,0,0,.30) 6px 7px);
+    mask-image:repeating-linear-gradient(0deg,#000 0 6px,rgba(0,0,0,.30) 6px 7px)}
+  .poster .p1{left:57%;width:4%;background-position:62% 30%}
+  .poster .p2{left:63%;width:7%;background-position:66% 34%}
+  .poster .p3{left:73%;width:11%;background-position:72% 38%}
+  .poster .scan{position:absolute;left:54%;right:0;height:1px;opacity:.7;
+    background:linear-gradient(90deg,transparent,var(--red),rgba(255,255,255,.85),var(--red),transparent)}
+  .poster .scan.a{top:26%;box-shadow:0 0 20px rgba(224,27,47,.6)}
+  .poster .scan.b{top:64%;box-shadow:0 0 20px rgba(224,27,47,.45)}
+  .poster .vline{position:absolute;top:0;bottom:0;left:69%;width:1px;opacity:.5;
+    background:linear-gradient(180deg,transparent,var(--red) 18%,#fff 50%,var(--red) 82%,transparent);
+    box-shadow:0 0 26px rgba(224,27,47,.7)}
+
+  /* ── 粒子层 ─────────────────────────────────────────────────────── */
+  .ambient,.glints{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden;opacity:0;transition:opacity 1.1s ease}
+  .stage.warm .ambient,.stage.warm .glints{opacity:1}
+  .feather{position:absolute;display:block;height:auto;opacity:0;mix-blend-mode:screen;
+    animation:drift var(--dur,18s) linear infinite;animation-delay:var(--delay,0s)}
+  @keyframes drift{
+    0%{opacity:0;transform:translate3d(0,0,0) rotate(var(--rot,0deg))}
+    14%{opacity:var(--op,.14)}
+    82%{opacity:var(--op,.14)}
+    100%{opacity:0;transform:translate3d(var(--dx,-90px),var(--dy,130px),0) rotate(calc(var(--rot,0deg) + var(--spin,22deg)))}
+  }
+  .ember{position:absolute;width:2px;height:2px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,120,90,.9),rgba(224,27,47,0) 70%);
+    opacity:0;animation:emberUp var(--dur,14s) linear infinite;animation-delay:var(--delay,0s)}
+  .dust{position:absolute;width:2px;height:2px;border-radius:50%;background:rgba(242,240,234,.75);
+    filter:blur(.4px);opacity:0;mix-blend-mode:screen;
+    animation:dustUp var(--dur,26s) linear infinite;animation-delay:var(--delay,0s)}
+  @keyframes dustUp{
+    0%{opacity:0;transform:translate3d(0,0,0) scale(.6)}
+    18%{opacity:var(--op,.35)}
+    80%{opacity:var(--op,.35)}
+    100%{opacity:0;transform:translate3d(var(--dx,18px),var(--dy,-120px),0) scale(1)}
+  }
+  @keyframes emberUp{
+    0%{opacity:0;transform:translate3d(0,0,0) scale(.7)}
+    16%{opacity:var(--op,.5)}
+    78%{opacity:var(--op,.5)}
+    100%{opacity:0;transform:translate3d(var(--dx,24px),var(--dy,-160px),0) scale(1.2)}
+  }
+  .glint{position:absolute;display:block;mix-blend-mode:screen;opacity:0;
+    animation:twinkle var(--dur,4.2s) ease-in-out infinite;animation-delay:var(--delay,0s)}
+  @keyframes twinkle{
+    0%,100%{opacity:0;transform:scale(.82)}
+    50%{opacity:var(--op,.5);transform:scale(1)}
+  }
+  .halo{position:absolute;z-index:2;pointer-events:none;left:44%;top:4%;width:72vmin;opacity:0;
+    mix-blend-mode:screen;filter:blur(.4px);transition:opacity 2s ease}
+  .stage.warm .halo{opacity:.10;animation:haloSpin 120s linear infinite}
+  @keyframes haloSpin{to{transform:rotate(360deg)}}
+
+  /* ── 开场 / 主体锁定框 ─────────────────────────────────────────── */
+  /* 电源横线 / HUD 分区浮入 / 退场统一由 JS 按契约时间轴驱动（便于 ?t= 定格与退场编排） */
+  .power{position:absolute;z-index:12;left:0;right:0;top:50%;height:1px;pointer-events:none;opacity:0;
+    background:linear-gradient(90deg,transparent 16%,rgba(242,240,234,.75) 50%,transparent 84%);transform:scaleX(0)}
+  .brand,.topright,.telemetry,.readout{opacity:0;will-change:opacity,transform}
+  .titleblock{will-change:opacity,transform}
+
+  .reticle{position:absolute;z-index:6;left:38%;top:8%;width:28%;height:46%;pointer-events:none;
+    opacity:0;transition:opacity .55s ease}
+  .reticle.show{opacity:1}
+  .reticle .rc{position:absolute;width:clamp(14px,2vmin,28px);height:clamp(14px,2vmin,28px);
+    border-color:rgba(242,240,234,.42);border-style:solid;opacity:0;
+    transition:opacity .5s ease,transform .5s cubic-bezier(.16,1,.3,1),border-color .4s ease}
+  .reticle .tl{left:0;top:0;border-width:1px 0 0 1px;transform:translate(-12px,-12px)}
+  .reticle .tr{right:0;top:0;border-width:1px 1px 0 0;transform:translate(12px,-12px)}
+  .reticle .bl{left:0;bottom:0;border-width:0 0 1px 1px;transform:translate(-12px,12px)}
+  .reticle .br{right:0;bottom:0;border-width:0 1px 1px 0;transform:translate(12px,12px)}
+  .reticle.show .rc{opacity:1;transform:none}
+  .reticle .cross{position:absolute;left:50%;top:50%;width:clamp(28px,4.6vmin,60px);height:clamp(28px,4.6vmin,60px);
+    transform:translate(-50%,-50%);opacity:0;transition:opacity .5s .2s ease}
+  .reticle .cross::before,.reticle .cross::after{content:"";position:absolute;background:rgba(242,240,234,.32)}
+  .reticle .cross::before{left:0;right:0;top:50%;height:1px}
+  .reticle .cross::after{top:0;bottom:0;left:50%;width:1px}
+  .reticle .ring{position:absolute;left:50%;top:50%;width:clamp(52px,8.4vmin,116px);height:clamp(52px,8.4vmin,116px);
+    transform:translate(-50%,-50%);border:1px solid rgba(242,240,234,.18);border-radius:50%;opacity:0;
+    transition:opacity .5s .3s ease}
+  .reticle.show .cross,.reticle.show .ring{opacity:1}
+  .reticle .rlabel{position:absolute;left:0;top:calc(-1 * clamp(18px,2.8vmin,32px));font-size:var(--label);
+    letter-spacing:.22em;color:var(--muted);white-space:nowrap;opacity:0;transition:opacity .5s .35s ease}
+  .reticle.show .rlabel{opacity:1;color:var(--red)}
+  .reticle .rlabel b{color:var(--paper);font-weight:500}
+  .reticle.locked .rc{border-color:rgba(224,27,47,.88);box-shadow:0 0 16px rgba(224,27,47,.35)}
+  .reticle.locked .cross::before,.reticle.locked .cross::after{background:rgba(224,27,47,.6)}
+  .reticle.locked .ring{border-color:rgba(224,27,47,.45)}
+  .reticle.locked .rlabel b{color:var(--red)}
+  .reticle.locked .ring{animation:ringPulse calc(.9s * var(--elisa-sp,1)) ease-out both}
+  @keyframes ringPulse{
+    0%{transform:translate(-50%,-50%) scale(.7);opacity:0}
+    30%{opacity:1}
+    100%{transform:translate(-50%,-50%) scale(1.28);opacity:.22}
+  }
+
+  /* ── 边角 / 轨道 ─────────────────────────────────────────────────── */
+  .corners{position:absolute;inset:clamp(16px,2vmin,34px);z-index:12;pointer-events:none}
+  .corner{position:absolute;width:clamp(16px,2.2vmin,30px);height:clamp(16px,2.2vmin,30px);
+    border-color:rgba(242,240,234,.22);border-style:solid}
+  .c1{left:0;top:0;border-width:1px 0 0 1px}
+  .c2{right:0;top:0;border-width:1px 1px 0 0;border-color:rgba(224,27,47,.5)}
+  .c3{left:0;bottom:0;border-width:0 0 1px 1px}
+  .c4{right:0;bottom:0;border-width:0 1px 1px 0}
+  .rail{position:absolute;z-index:12;pointer-events:none;left:calc(var(--mx) - clamp(16px,2.2vmin,30px));
+    top:var(--my);bottom:var(--my);width:12px;opacity:.9}
+  .rail::before{content:"";position:absolute;left:5px;top:0;bottom:0;width:1px;background:rgba(242,240,234,.12)}
+  .rail i{position:absolute;left:2px;width:7px;height:1px;background:rgba(242,240,234,.26)}
+  .rail i:nth-child(1){top:0}.rail i:nth-child(2){top:18%}.rail i:nth-child(3){top:36%}
+  .rail i:nth-child(4){top:54%}.rail i:nth-child(5){top:72%}.rail i:nth-child(6){top:90%}
+  .rail i.on{background:var(--red);box-shadow:0 0 8px rgba(224,27,47,.7)}
+  .rail .vert{position:absolute;left:-1px;top:52%;transform:rotate(-90deg) translateX(-50%);transform-origin:left top;
+    white-space:nowrap;font-size:clamp(8px,.78vmin,10px);letter-spacing:.30em;color:rgba(242,240,234,.20)}
+  /* ACT 0 期间不提前露出 HUD 装饰框：boot 相位（1.15s）起才随 HUD 一起浮入 */
+  .rail,.corners,.grid{transition:opacity .6s ease}
+  .stage:not(.booted) .rail,.stage:not(.booted) .corners,.stage:not(.booted) .grid{opacity:0}
+
+  /* ── 字标 ───────────────────────────────────────────────────────── */
+  .brand{position:absolute;z-index:20;left:var(--mx);top:var(--my);width:clamp(240px,26vw,420px)}
+  .brand .mark{font-size:var(--label);font-weight:600;letter-spacing:.34em;line-height:1}
+  .brand .synth{margin-top:7px;font-size:clamp(8px,.72vmin,10px);letter-spacing:.26em;color:var(--faint)}
+  .brand .name{margin-top:clamp(8px,1.4vmin,18px);font-size:clamp(24px,3.0vmin,40px);font-weight:700;letter-spacing:.15em;line-height:.92}
+  .brand .bar{margin-top:clamp(10px,1.6vmin,18px);width:clamp(140px,15vw,240px);height:1px;position:relative;
+    background:linear-gradient(90deg,var(--red),rgba(224,27,47,.06))}
+  .brand .bar::before{content:"";position:absolute;left:0;top:-2px;width:5px;height:5px;background:var(--red)}
+  .brand .tag{margin-top:clamp(8px,1.4vmin,14px);font-size:clamp(8px,.72vmin,10px);letter-spacing:.22em;color:var(--faint)}
+
+  /* ── 右上：状态 + 跳过 ──────────────────────────────────────────── */
+  .topright{position:absolute;z-index:30;right:var(--mx);top:var(--my);display:flex;flex-direction:column;align-items:flex-end;gap:clamp(10px,1.6vmin,18px)}
+  .status{text-align:right;font-size:var(--label);letter-spacing:.18em;color:var(--muted);line-height:1.95}
+  .status b{color:var(--paper);font-weight:500}
+  .status .dim{color:var(--faint);font-size:clamp(8px,.78vmin,10px);letter-spacing:.16em}
+  .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--amber);margin-right:7px;
+    box-shadow:0 0 12px var(--amber);animation:pulse 2.2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .skip{display:flex;align-items:center;gap:9px;height:clamp(30px,3.6vmin,40px);padding:0 clamp(12px,1.4vmin,18px);
+    border:1px solid rgba(242,240,234,.26);background:rgba(6,6,10,.30);
+    font-size:var(--label);letter-spacing:.16em;color:rgba(242,240,234,.86);
+    transition:border-color .18s,background .18s,box-shadow .18s,color .18s}
+  .skip:hover,.skip:focus-visible{border-color:rgba(224,27,47,.85);background:rgba(224,27,47,.12);
+    box-shadow:0 0 22px rgba(224,27,47,.22);outline:none;color:var(--paper)}
+  .skip kbd{font:inherit;font-size:clamp(8px,.72vmin,10px);letter-spacing:.1em;border:1px solid rgba(242,240,234,.22);
+    padding:2px 5px;color:var(--faint)}
+
+  /* ── 左中：自检遥测 ─────────────────────────────────────────────── */
+  .telemetry{position:absolute;z-index:20;left:var(--mx);top:calc(var(--my) + clamp(118px,17.5vh,196px));
+    width:clamp(252px,24vw,420px);border-top:1px solid rgba(242,240,234,.16);padding-top:clamp(8px,1.2vmin,14px)}
+  .tele-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:clamp(8px,1.2vmin,14px);
+    font-size:var(--label);letter-spacing:.20em;color:var(--muted)}
+  .tele-head b{color:var(--amber);font-weight:500;letter-spacing:.16em}
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;
+    font-family:var(--fm);font-size:var(--data);line-height:2.0;position:relative}
+  .row .k{color:rgba(242,240,234,.34);letter-spacing:.06em;white-space:nowrap;position:relative;padding-left:11px}
+  .row .k::before{content:"";position:absolute;left:0;top:50%;width:4px;height:1px;background:rgba(242,240,234,.25);transform:translateY(-50%)}
+  .row .v{font-weight:400;color:rgba(242,240,234,.20);letter-spacing:.03em;text-align:right;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;max-width:58%;transition:color .3s ease}
+  .row.locked .k{color:rgba(242,240,234,.52)}
+  .row.locked .k::before{width:6px;background:var(--red);box-shadow:0 0 8px rgba(224,27,47,.6)}
+  .row.locked .v{color:rgba(242,240,234,.92);animation:valIn calc(.42s * var(--elisa-sp,1)) cubic-bezier(.16,1,.3,1)}
+  .row.missing .v{color:rgba(242,240,234,.34)}
+  @keyframes valIn{0%{opacity:0;transform:translateX(6px);filter:blur(2px)}100%{opacity:1;transform:none;filter:none}}
+  .steps{display:flex;gap:5px;margin-top:clamp(10px,1.6vmin,18px)}
+  .steps i{display:block;height:2px;flex:1;background:rgba(242,240,234,.13);transition:background .3s,box-shadow .3s}
+  .steps i.on{background:rgba(224,27,47,.85);box-shadow:0 0 8px rgba(224,27,47,.45)}
+  .steps i.now{background:var(--paper);box-shadow:0 0 12px rgba(242,240,234,.55)}
+  .tele-foot{margin-top:clamp(8px,1.2vmin,12px);padding-top:clamp(7px,1vmin,10px);border-top:1px solid rgba(242,240,234,.10);
+    font-size:clamp(8px,.78vmin,10px);letter-spacing:.14em;color:rgba(242,240,234,.24);line-height:1.9;
+    display:flex;justify-content:space-between;gap:10px}
+  .tele-foot b{font-weight:400;color:rgba(242,240,234,.34);white-space:nowrap}
+
+  /* ── 左下：相位标题 ─────────────────────────────────────────────── */
+  .titleblock{position:absolute;z-index:20;left:var(--mx);bottom:var(--my);width:min(60vw,900px)}
+  .kicker{font-size:var(--label);letter-spacing:.28em;color:var(--red);margin-bottom:clamp(10px,1.8vmin,22px);text-transform:uppercase}
+  .title{font-size:var(--display);line-height:.90;font-weight:700;letter-spacing:.012em;text-transform:uppercase;
+    text-shadow:0 0 40px rgba(6,6,10,.6)}
+  .title.small{font-size:calc(var(--display) * .74)}
+  .sub{margin-top:clamp(12px,2vmin,24px);font-family:var(--fc);font-size:var(--sub);letter-spacing:.12em;color:rgba(242,240,234,.64)}
+  .meta{margin-top:clamp(7px,1.2vmin,14px);font-size:clamp(8px,.85vmin,11px);letter-spacing:.18em;color:rgba(242,240,234,.30);text-transform:uppercase}
+  .trule{margin-top:clamp(12px,2vmin,24px);width:clamp(160px,18vw,280px);height:1px;background:rgba(242,240,234,.14);position:relative;overflow:hidden}
+  .trule i{position:absolute;inset:0;transform-origin:left center;transform:scaleX(var(--rule,.04));background:linear-gradient(90deg,var(--red),rgba(224,27,47,.25))}
+  .titleblock.enter .kicker{animation:tbIn calc(.42s * var(--elisa-sp,1)) cubic-bezier(.16,1,.3,1) both}
+  .titleblock.enter .title{animation:tbIn calc(.58s * var(--elisa-sp,1)) calc(.04s * var(--elisa-sp,1)) cubic-bezier(.16,1,.3,1) both}
+  .titleblock.enter .sub{animation:tbIn calc(.46s * var(--elisa-sp,1)) calc(.13s * var(--elisa-sp,1)) cubic-bezier(.16,1,.3,1) both}
+  .titleblock.enter .meta{animation:tbIn calc(.46s * var(--elisa-sp,1)) calc(.19s * var(--elisa-sp,1)) cubic-bezier(.16,1,.3,1) both}
+  .titleblock.enter .trule{animation:tbIn calc(.5s * var(--elisa-sp,1)) calc(.2s * var(--elisa-sp,1)) cubic-bezier(.16,1,.3,1) both}
+  @keyframes tbIn{0%{opacity:0;transform:translateY(12px);filter:blur(3px)}100%{opacity:1;transform:none;filter:none}}
+
+  /* ── 右下：进度 ─────────────────────────────────────────────────── */
+  .readout{position:absolute;z-index:20;right:var(--mx);bottom:var(--my);text-align:right;min-width:clamp(200px,21vw,340px)}
+  .sync{display:flex;align-items:baseline;justify-content:flex-end;gap:clamp(8px,1.2vmin,14px)}
+  .sync .lbl{font-size:var(--label);letter-spacing:.22em;color:var(--muted)}
+  .sync .num{font-family:var(--fm);font-size:clamp(30px,4.6vmin,58px);line-height:.8;font-weight:500;letter-spacing:.01em}
+  .sync .pct{font-family:var(--fm);font-size:clamp(10px,1.1vmin,14px);color:var(--muted)}
+  .dashes{display:flex;gap:2px;justify-content:flex-end;margin-top:clamp(10px,1.6vmin,18px)}
+  .dashes i{display:block;flex:1;height:3px;background:rgba(242,240,234,.13);transition:background .18s,box-shadow .18s}
+  .dashes i.on{background:var(--red);box-shadow:0 0 9px rgba(224,27,47,.6)}
+  .frame{margin-top:clamp(8px,1.2vmin,13px);font-family:var(--fm);font-size:clamp(9px,.86vmin,11px);letter-spacing:.14em;color:rgba(242,240,234,.32)}
+  .mode-line{margin-top:4px;font-size:clamp(8px,.74vmin,10px);letter-spacing:.18em;color:rgba(242,240,234,.22)}
+
+  /* ── 终帧提示（6.28 出现，随 HUD 退场一起淡出；透明度由 JS 按时间轴驱动） ── */
+  .hint{position:absolute;z-index:22;left:50%;bottom:calc(var(--my) * .52);transform:translateX(-50%);
+    display:flex;align-items:baseline;gap:clamp(10px,1.4vmin,18px);white-space:nowrap;
+    font-size:clamp(10px,1.05vmin,13px);letter-spacing:.22em;color:rgba(242,240,234,.66);
+    opacity:0;pointer-events:none}
+  .hint.show{opacity:1}
+  .hint .cn{font-family:var(--fc);letter-spacing:.16em;color:var(--paper)}
+  .hint b{color:var(--paper);font-weight:500}
+
+  /* ── 自动播放兜底 / 独立预览占位 ────────────────────────────────── */
+  .start{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;
+    background:rgba(6,6,10,.84);backdrop-filter:blur(3px)}
+  .start[hidden]{display:none}
+  .start button{border:1px solid rgba(242,240,234,.32);background:rgba(6,6,10,.5);padding:14px 30px;
+    font-size:clamp(11px,1.1vmin,14px);letter-spacing:.24em;transition:border-color .2s,box-shadow .2s}
+  .start button:hover,.start button:focus-visible{border-color:var(--red);box-shadow:0 0 26px rgba(224,27,47,.25);outline:none}
+
+  .desktop{position:absolute;inset:0;z-index:1;opacity:0;transition:opacity .5s ease;
+    background:radial-gradient(1000px 600px at 62% 38%,rgba(224,27,47,.10),transparent 66%),linear-gradient(160deg,#08080c,#0c0c12 45%,#060608)}
+  .stage.finished .desktop{opacity:1}
+  body.embed .desktop{display:none}
+  .desktop .dgrid{position:absolute;inset:0;opacity:.16;
+    background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+    background-size:64px 64px}
+  .desk-card{position:absolute;left:var(--mx);top:26vh;max-width:70vw;border-left:2px solid var(--red);padding:clamp(16px,2.4vmin,26px) 0 clamp(16px,2.4vmin,26px) clamp(20px,2.6vmin,32px)}
+  .desk-kicker{font-size:var(--label);letter-spacing:.30em;color:var(--red)}
+  .desk-card h1{margin:clamp(12px,2vmin,20px) 0 0;font-size:clamp(40px,7vmin,90px);line-height:.92;letter-spacing:.02em}
+  .desk-card p{margin:clamp(12px,2vmin,20px) 0 0;font-size:clamp(12px,1.2vmin,15px);letter-spacing:.10em;color:rgba(242,240,234,.56)}
+  .desk-actions{margin-top:clamp(20px,3vmin,32px);display:flex;align-items:center;gap:18px}
+  .desk-actions button{border:1px solid rgba(242,240,234,.3);background:rgba(0,0,0,.25);padding:10px 18px;font-size:var(--label);letter-spacing:.18em}
+  .desk-actions button:hover,.desk-actions button:focus-visible{border-color:var(--red);outline:none;box-shadow:0 0 18px rgba(224,27,47,.2)}
+  .desk-actions span{font-size:clamp(9px,.85vmin,11px);letter-spacing:.14em;color:rgba(242,240,234,.32)}
+  .desk-foot{position:absolute;left:var(--mx);bottom:var(--my);font-size:clamp(8px,.78vmin,10px);letter-spacing:.2em;color:rgba(242,240,234,.26);line-height:1.9}
+
+  /* ── ACT 0 · 黑幕开幕（0–1.15s） ─────────────────────────────────── */
+  .opening{position:absolute;inset:0;z-index:60;pointer-events:none;overflow:hidden;isolation:isolate}
+  .opening.gone{visibility:hidden}
+  .op-cur{position:absolute;left:0;right:0;height:calc(50% + 1px);background:#06060a;will-change:transform}
+  .op-cur.top{top:0}
+  .op-cur.bottom{bottom:0}
+  .op-cur.top::after,.op-cur.bottom::before{content:"";position:absolute;left:0;right:0;height:1px;opacity:.28;
+    background:linear-gradient(90deg,transparent 22%,rgba(224,27,47,.65) 50%,transparent 78%)}
+  .op-cur.top::after{bottom:0}
+  .op-cur.bottom::before{top:0}
+  .op-glow{position:absolute;z-index:1;left:50%;top:50%;width:min(74vw,940px);height:26vh;transform:translate(-50%,-50%);
+    background:radial-gradient(closest-side,rgba(224,27,47,.36),rgba(224,27,47,.11) 52%,transparent 76%);
+    filter:blur(24px);opacity:0}
+  .op-core{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;will-change:opacity,transform}
+  .op-brackets{position:absolute;left:50%;top:50%;width:min(68vw,min(820px,96vmin));height:clamp(210px,38vh,350px);
+    transform:translate(-50%,-50%);opacity:0}
+  .ob{position:absolute;width:clamp(16px,2.4vmin,30px);height:clamp(16px,2.4vmin,30px);
+    border:0 solid rgba(242,240,234,.44)}
+  .ob.tl{left:0;top:0;border-top-width:1px;border-left-width:1px;
+    clip-path:inset(0 calc((1 - var(--d,0)) * 100%) calc((1 - var(--d,0)) * 100%) 0)}
+  .ob.tr{right:0;top:0;border-top-width:1px;border-right-width:1px;
+    clip-path:inset(0 0 calc((1 - var(--d,0)) * 100%) calc((1 - var(--d,0)) * 100%))}
+  .ob.bl{left:0;bottom:0;border-bottom-width:1px;border-left-width:1px;
+    clip-path:inset(calc((1 - var(--d,0)) * 100%) calc((1 - var(--d,0)) * 100%) 0 0)}
+  .ob.br{right:0;bottom:0;border-bottom-width:1px;border-right-width:1px;
+    clip-path:inset(calc((1 - var(--d,0)) * 100%) 0 0 calc((1 - var(--d,0)) * 100%))}
+  .op-mark{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center}
+  .op-small{display:flex;justify-content:center;gap:.34em;font-size:clamp(11px,1.32vmin,18px);font-weight:600;
+    color:rgba(242,240,234,.80);line-height:1}
+  .op-small span,.op-big span{display:inline-block;text-align:center;white-space:pre;overflow:hidden}
+  .op-big{display:flex;justify-content:center;gap:.055em;margin-top:clamp(7px,1.2vmin,14px);
+    font-size:clamp(54px,12.8vmin,170px);line-height:.86;font-weight:700;color:var(--paper);
+    text-shadow:0 0 56px rgba(242,240,234,.13)}
+  .op-rule{position:relative;margin-top:clamp(13px,2vmin,22px);height:1px;width:clamp(170px,22vw,300px);
+    background:linear-gradient(90deg,transparent,rgba(224,27,47,.92) 15%,rgba(224,27,47,.92) 85%,transparent);
+    transform:scaleX(0);transform-origin:center}
+  .op-rule::after{content:"";position:absolute;left:50%;top:-2px;width:5px;height:5px;margin-left:-2.5px;
+    transform:rotate(45deg);background:var(--red)}
+  .op-term{display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:clamp(18px,3vmin,34px);
+    font-family:var(--fm);font-size:clamp(9px,.92vmin,12px);line-height:2.05;letter-spacing:.22em;
+    color:rgba(242,240,234,.42);opacity:0}
+  .op-term .op-line{white-space:pre;min-height:1em}
+  .op-term .op-line b{color:rgba(242,240,234,.82);font-weight:400}
+  .op-caret{display:inline-block;width:.52em;height:.92em;background:rgba(242,240,234,.5);
+    vertical-align:-.1em;margin-left:.08em;animation:opCaret .86s steps(1) infinite}
+  @keyframes opCaret{0%,49%{opacity:1}50%,100%{opacity:0}}
+  .op-ping{position:absolute;z-index:4;left:50%;top:50%;width:2px;height:2px;margin:-1px 0 0 -1px;
+    background:var(--red);box-shadow:0 0 14px rgba(224,27,47,.9),0 0 46px rgba(224,27,47,.5);opacity:0}
+  .op-seam{position:absolute;z-index:5;left:0;right:0;top:50%;height:2px;margin-top:-1px;opacity:0;transform:scaleX(0);
+    background:linear-gradient(90deg,transparent,rgba(224,27,47,.9) 6%,#ff5a6b 50%,rgba(224,27,47,.9) 94%,transparent);
+    box-shadow:0 0 22px rgba(224,27,47,.7),0 0 74px rgba(224,27,47,.4)}
+  .op-flash{position:absolute;z-index:6;inset:0;background:#fff;opacity:0}
+
+  /* ── 退场：HUD 离场（6.62+）与上下幕布合拢（6.78–7.10） ────────── */
+  .shutter{position:absolute;left:0;right:0;height:calc(50% + 1px);z-index:50;pointer-events:none;
+    background:#06060a;will-change:transform}
+  .shutter-top{top:0;transform:translateY(-101%)}
+  .shutter-bottom{bottom:0;transform:translateY(101%)}
+  .shutter-top::after,.shutter-bottom::before{content:"";position:absolute;left:0;right:0;height:1px;opacity:.7;
+    background:linear-gradient(90deg,transparent 8%,rgba(224,27,47,.6) 50%,transparent 92%)}
+  .shutter-top::after{bottom:0}
+  .shutter-bottom::before{top:0}
+  .seam{position:absolute;z-index:51;left:0;right:0;top:50%;height:2px;margin-top:-1px;pointer-events:none;opacity:0;
+    background:linear-gradient(90deg,transparent,rgba(224,27,47,.9) 7%,#ff5a6b 50%,rgba(224,27,47,.9) 93%,transparent);
+    box-shadow:0 0 22px rgba(224,27,47,.65),0 0 76px rgba(224,27,47,.38)}
+  .stage.holding .seam{animation:seamBreath 1.6s ease-in-out infinite}
+  @keyframes seamBreath{0%,100%{opacity:.6}50%{opacity:1}}
+  .stage.exiting .ambient,.stage.exiting .glints,.stage.exiting .halo,.stage.exiting .rail,
+  .stage.exiting .corners{opacity:0;transition:opacity .28s linear}
+  /* 6.62s 起停止粒子/光效动画，释放 CPU 给幕布合拢与宿主交接 */
+  .stage.exiting .ambient i,.stage.exiting .glints img,.stage.exiting .halo,
+  .stage.exiting .sweep,.stage.exiting .blade,.stage.exiting .flare{animation-play-state:paused}
+
+  /* ── 减弱动态 ───────────────────────────────────────────────────── */
+  body.reduced *{animation-duration:.001ms !important;transition-duration:.001ms !important}
+  body.reduced .ambient,body.reduced .glints,body.reduced .halo,body.reduced .sweep,body.reduced .blade,body.reduced .flare{display:none}
+  body.reduced .titleblock.enter .kicker,body.reduced .titleblock.enter .title,
+  body.reduced .titleblock.enter .sub,body.reduced .titleblock.enter .meta{animation:none}
+
+  /* ── 窄屏 / 矮屏降级 ────────────────────────────────────────────── */
+  @media (max-width:900px){
+    .rail,.telemetry{display:none}
+    .brand .synth,.brand .tag{display:none}
+    .readout{min-width:160px}
+    .titleblock{width:76vw}
+  }
+  @media (max-height:620px){
+    .telemetry{display:none}
+    .brand .tag{display:none}
+    .sub{display:none}
+    .meta{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="stage" id="stage" data-phase="opening">
+  <!-- ── ACT 0 · 黑幕开幕（0–1.15s）：DSH 字标解码 + 上下幕布开幕 ── -->
+  <section class="opening" id="opening" aria-hidden="true">
+    <div class="op-cur top" id="opCurTop"></div>
+    <div class="op-cur bottom" id="opCurBottom"></div>
+    <div class="op-glow" id="opGlow"></div>
+    <div class="op-core" id="opCore">
+      <div class="op-brackets" id="opBrackets">
+        <i class="ob tl"></i><i class="ob tr"></i><i class="ob bl"></i><i class="ob br"></i>
+      </div>
+      <div class="op-mark">
+        <div class="op-small" id="opSmall"></div>
+        <div class="op-big" id="opBig"></div>
+        <div class="op-rule" id="opRule"></div>
+      </div>
+      <div class="op-term">
+        <div class="op-line" id="opLine1"></div>
+        <div class="op-line" id="opLine2"></div>
+      </div>
+      <div class="op-ping" id="opPing"></div>
+    </div>
+    <div class="op-seam" id="opSeam"></div>
+    <div class="op-flash" id="opFlash"></div>
+  </section>
+  <!-- 独立预览时的占位桌面（embed 模式隐藏） -->
+  <section class="desktop" id="desktop" aria-hidden="true">
+    <div class="dgrid"></div>
+    <div class="desk-card">
+      <div class="desk-kicker">DEEPSEEK HARNESS / SESSION READY</div>
+      <h1>HARNESS<br>ONLINE</h1>
+      <p id="deskNote">启动层已退出。这里是离线预览占位页；安装插件后由真实宿主接管。</p>
+      <div class="desk-actions">
+        <button type="button" id="replay">重播 REPLAY</button>
+        <span>R 重播 · Esc 跳过</span>
+      </div>
+    </div>
+    <div class="desk-foot">DSH // COLD START · OFFLINE PREVIEW<br>SOURCE / HACHIWARE ELISA · LOCAL ONLY</div>
+  </section>
+
+  <section class="splash" id="splash" role="dialog" aria-label="ELISA 启动动画">
+    <div class="plate blinds" id="hero">
+      <img class="still" id="still" src="../lib/assets/hero-poster.webp" alt="">
+      <video id="video" src="../lib/assets/hero-loop.mp4" poster="../lib/assets/hero-poster.webp"
+             muted playsinline preload="auto" disablepictureinpicture></video>
+    </div>
+    <div class="grade"></div>
+    <div class="bloom"></div>
+    <div class="halo"><img src="../lib/assets/layers/halo.webp" alt="" style="width:100%;display:block"></div>
+    <div class="poster" id="poster">
+      <div class="pane p1"></div><div class="pane p2"></div><div class="pane p3"></div>
+      <div class="scan a"></div><div class="scan b"></div><div class="vline"></div>
+    </div>
+    <div class="grid"></div>
+    <div class="ambient" id="ambient"></div>
+    <div class="glints" id="glints">
+      <img class="glint" src="../lib/assets/layers/star.webp" alt="" style="left:64%;top:18%;width:clamp(10px,1.6vmin,22px)">
+      <img class="glint" src="../lib/assets/layers/star.webp" alt="" style="left:86%;top:58%;width:clamp(8px,1.2vmin,16px)">
+      <img class="glint" src="../lib/assets/layers/star.webp" alt="" style="left:52%;top:42%;width:clamp(6px,1vmin,13px)">
+    </div>
+    <div class="sweep" id="sweep"></div>
+    <div class="flare" id="flare"><img src="../lib/assets/layers/star.webp" alt=""></div>
+    <div class="blade" id="blade"></div>
+    <div class="power"></div>
+    <div class="reticle" id="reticle">
+      <i class="rc tl"></i><i class="rc tr"></i><i class="rc bl"></i><i class="rc br"></i>
+      <div class="cross"></div>
+      <div class="ring"></div>
+      <div class="rlabel" id="reticleLabel"><b>SUBJECT 07</b> · TRACKING</div>
+    </div>
+    <div class="flash"></div>
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    <div class="corners"><i class="corner c1"></i><i class="corner c2"></i><i class="corner c3"></i><i class="corner c4"></i></div>
+    <div class="rail">
+      <i></i><i></i><i></i><i></i><i></i><i></i>
+      <div class="vert">DEEPSEEK HARNESS / COLD START</div>
+    </div>
+
+    <header class="brand">
+      <div class="mark">DEEPSEEK</div>
+      <div class="synth">SYNTHESIZE INTELLIGENCE</div>
+      <div class="name">HARNESS</div>
+      <div class="bar"></div>
+      <div class="tag">COMMUNITY BOOT SKIN · LOCAL ONLY</div>
+    </header>
+
+    <div class="topright">
+      <div class="status">
+        <div><span class="dot"></span><b id="statusHead">BOOT</b> / <span id="factProfileTop">DESKTOP</span></div>
+        <div class="dim">MODE <span id="statusMode">SESSION</span> · BUILD <span id="factBuild">0.2.0</span></div>
+        <div class="dim">LOCAL ASSET · NOT FOR REDISTRIBUTION</div>
+      </div>
+      <button class="skip" id="skip" type="button" aria-label="跳过启动动画">跳过 <span>SKIP</span><kbd>ESC</kbd></button>
+    </div>
+
+    <div class="telemetry">
+      <div class="tele-head"><span>SELF-CHECK / LIVE</span><b id="checkState">SYNCING</b></div>
+      <div class="row" data-key="profile" data-lock="2.45"><span class="k">PROFILE</span><b class="v" id="factProfile">—</b></div>
+      <div class="row" data-key="model" data-lock="2.80"><span class="k">MODEL</span><b class="v" id="factModel">—</b></div>
+      <div class="row" data-key="workspace" data-lock="3.15"><span class="k">WORKSPACE</span><b class="v" id="factWorkspace">—</b></div>
+      <div class="row" data-key="bundleCount" data-lock="3.50"><span class="k">BUNDLES</span><b class="v" id="factBundles">—</b></div>
+      <div class="row" data-key="sandbox" data-lock="3.85"><span class="k">SANDBOX</span><b class="v" id="factSandbox">—</b></div>
+      <div class="row" data-key="sessions" data-lock="4.20"><span class="k">SESSIONS</span><b class="v" id="factSessions">—</b></div>
+      <div class="steps" id="steps"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="tele-foot"><span>LIVE HOST FACTS · MISSING SHOW —</span><b id="factFootRight">PLUGINS — · BUILD —</b></div>
+    </div>
+
+    <div class="titleblock" id="titleblock">
+      <div class="kicker" id="kicker">// DSH HARNESS · COLD START</div>
+      <div class="title" id="title">COLD<br>BOOT</div>
+      <div class="sub" id="sub">正在初始化启动层</div>
+      <div class="meta" id="meta">PROFILE / MODEL / BUNDLES / SANDBOX</div>
+      <div class="trule"><i id="ruleFill"></i></div>
+    </div>
+
+    <div class="readout">
+      <div class="sync"><span class="lbl">SYNC</span><span class="num" id="syncNum">00</span><span class="pct">%</span></div>
+      <div class="dashes" id="dashes"></div>
+      <div class="frame" id="frame">FRAME 001 / 144 · T+0.00s</div>
+      <div class="mode-line" id="modeLine">COLD START SEQUENCE · 6.0S</div>
+    </div>
+
+    <div class="hint" id="hint"><span class="cn">按任意键进入</span><b>PRESS ANY KEY</b><span>或点击</span></div>
+
+    <div class="start" id="start" hidden>
+      <button type="button" id="startBtn">点击开始 · CLICK TO BOOT</button>
+    </div>
+
+    <!-- 退场：HUD 退场（6.62+）→ 上下幕布合拢（6.78–7.10）→ 黑场 + 绯红光缝呼吸 -->
+    <div class="shutter shutter-top" id="shutterTop"></div>
+    <div class="shutter shutter-bottom" id="shutterBottom"></div>
+    <div class="seam" id="seam"></div>
+  </section>
+</div>
+
+<!-- 音频引擎（B · lib/audio.js；契约 spec §4.3，存在性守卫，缺失时静默） -->
+<script src="../lib/audio.js"></script>
+<script>
+(function () {
+  'use strict'
+
+  /* ── 速度模型（_p7/design-spec-v5.md §2.4） ───────────────────────
+     ?speed= 整数百分比（缺省 100 = v0.4 原速；钳制 50–150）→ SPEED = speed/100。
+     主时钟 t_anim = wall_elapsed * SPEED；契约常量（T_OPEN…TOTAL）一律不动，
+     墙钟总时长 = TOTAL / SPEED（80% → 9.0s，50% → 14.4s，150% → 4.8s）。
+     CSS 冲击层用 --elisa-sp = I = 1/sqrt(SPEED)（只缩放一次性冲击动作的
+     duration/delay）；视频 playbackRate 与音轨 rate = SPEED。 */
+  /* ── 契约时间轴（_p5/design-spec-v3.md §1；改则同步测试） ──────── */
+  var T_OPEN = 1.15         // 开幕结束 / boot 开始
+  var T_ELISA = 2.25        // ELISA 相位
+  var T_HANDSHAKE = 4.30    // HANDSHAKE 相位
+  var T_CUT = 5.35          // 剑光切场
+  var T_ONLINE = 5.77       // HARNESS ONLINE
+  var HINT_AT = 6.28        // 「按任意键进入」出现
+  var EXIT_AT = 6.62        // HUD 退场开始
+  var SHUTTER_AT = 6.78     // 上下幕布合拢开始
+  var TOTAL = 7.20          // 动画本体结束，发送 done
+
+  /* 内部弹性常量（spec §1：A 可微调 ±0.1s，相位起点不动） */
+  var REVEAL_A = 1.45       // 百叶窗揭幕开始
+  var REVEAL_B = 2.60       // 百叶窗揭幕结束
+  var RETICLE_A = 2.70      // 主体锁定框出现
+  var RETICLE_B = 4.35      // 主体锁定框收起
+  var LOCK_AT = 3.65        // SUBJECT LOCKED
+  var SWEEP_AT = 1.95       // 首次光扫
+  var SCAN_A = 1.55         // 档案切片闪切窗口
+  var SCAN_B = 2.15
+  var EXIT_END = 6.95       // HUD 全部退场
+  var SHUT_DONE = 7.10      // 幕布完全合拢（此后黑场 + 光缝呼吸）
+  var REDUCED_T = 6.20      // 减弱动态静态终帧
+  var DEFAULT_VERSION = '0.6.0' // 离线默认值；?v= 或宿主注入优先，不写死发布版本
+
+  var ACTS = [
+    { t: 0.00, key: 'opening', kicker: '// DEEPSEEK HARNESS · SYSTEM WAKE', title: 'DEEPSEEK\nHARNESS',
+      sub: '黑幕开幕 · 冷启动协议', meta: 'WORDMARK DECODE / LIGHT SEAM / CURTAIN', check: 'WAKING', head: 'BOOT' },
+    { t: T_OPEN, key: 'boot', kicker: '// DSH HARNESS · COLD START', title: 'COLD\nBOOT',
+      sub: '正在初始化启动层', meta: 'PROFILE / MODEL / BUNDLES / SANDBOX', check: 'SYNCING', head: 'BOOT' },
+    { t: T_ELISA, key: 'elisa', kicker: '// SUBJECT RECOGNIZED · ELISA', title: 'ELISA',
+      sub: 'HACHIWARE ORIGINAL / GLASS COVENANT', meta: 'RED HAIR · WHITE SHELL · ARROW SWORD', check: 'LINKING', head: 'BOOT' },
+    { t: T_HANDSHAKE, key: 'handshake', kicker: '// PERMISSION CHECK · HANDSHAKE', title: 'HANDSHAKE',
+      sub: '权限校验 · 遥测回填', meta: 'PROFILE / MODEL / WORKSPACE / SESSIONS', check: 'VERIFYING', head: 'BOOT' },
+    { t: T_CUT, key: 'cut', kicker: '// CUT · HANDSHAKE OK', title: 'HANDSHAKE OK',
+      sub: '剑光切场 · 进入终帧', meta: 'CHROMA SPLIT / 120MS', check: 'OK', head: 'BOOT' },
+    { t: T_ONLINE, key: 'online', kicker: '// SESSION READY · HARNESS ONLINE', title: 'HARNESS\nONLINE',
+      sub: '欢迎回来，OPERATOR', meta: 'DEEPSEEK HARNESS · COMMUNITY BOOT SKIN', check: 'ONLINE', head: 'READY' }
+  ]
+
+  var SYNC_KEYS = [[0, 0], [T_OPEN, 8], [T_ELISA, 30], [2.60, 40], [3.00, 54], [LOCK_AT, 63],
+    [T_HANDSHAKE, 74], [T_CUT, 90], [T_ONLINE, 97], [EXIT_AT, 99], [TOTAL, 100]]
+  var STEPS = [0, T_OPEN, T_ELISA, T_HANDSHAKE, T_CUT, T_ONLINE]
+  var LOCK_KEYS = ['profile', 'model', 'workspace', 'bundleCount', 'sandbox', 'sessions']
+  var LABELS = { profile: 'PROFILE', model: 'MODEL', workspace: 'WORKSPACE', bundleCount: 'BUNDLES', sandbox: 'SANDBOX', sessions: 'SESSIONS' }
+
+  function clampInt(value, min, max, fallback) {
+    if (!isFinite(value)) return fallback
+    return Math.max(min, Math.min(max, Math.round(value)))
+  }
+
+  var q = new URLSearchParams(location.search)
+  var EMBED = q.get('embed') === '1'
+  var PREVIEW = q.get('preview') === '1'
+  var injected = window.__DSH_ELISA__ || {}
+  var VERSION = String(q.get('v') || window.__DSH_ELISA_VERSION__ || DEFAULT_VERSION)
+  var debugT = q.has('t') ? Math.max(0, Math.min(TOTAL + 0.6, parseFloat(q.get('t')) || 0)) : null
+  var reduced = q.get('reduced') === '1'
+  var autoskip = q.has('autoskip') ? Math.max(0, parseFloat(q.get('autoskip')) || 0) : null
+  var allowSkip = q.get('allowSkip') !== '0'
+  var soundOn = !(q.get('sound') === '0' || q.get('sound') === 'false' || injected.sound === false)
+  var volumeQ = parseInt(q.get('volume'), 10)
+  var volume = clampInt(isFinite(volumeQ) ? volumeQ : (typeof injected.volume === 'number' ? injected.volume : 65), 0, 100, 65)
+  /* 速度：?speed=（整数百分比）；缺省 100（离线预览保持 v0.4 原速），越界钳制 50–150。
+     iframe 由 lib/splash.js 显式传 speed=<config.splashSpeed>，不会走缺省分支。 */
+  var speedRaw = q.has('speed')
+    ? parseInt(q.get('speed'), 10)
+    : (isFinite(Number(injected.splashSpeed)) ? Number(injected.splashSpeed) : 100)
+  var splashSpeed = clampInt(speedRaw, 50, 150, 100)
+  var SPEED = splashSpeed / 100
+  var IMPACT = 1 / Math.sqrt(SPEED)
+  var TOTAL_WALL = Math.round(TOTAL / SPEED * 1000) / 1000
+  try { document.documentElement.style.setProperty('--elisa-sp', IMPACT.toFixed(5)) } catch (err) { /* noop */ }
+  var AUDIO_SRC = '../lib/assets/audio/boot.wav'
+  var CHIME_SRC = '../lib/assets/audio/chime.wav'
+  var modeLabel = { session: 'SESSION', daily: 'DAILY', always: 'ALWAYS', preview: 'PREVIEW' }
+
+  /* ── DOM ──────────────────────────────────────────────────────── */
+  var $ = function (id) { return document.getElementById(id) }
+  var stage = $('stage'), splash = $('splash'), hero = $('hero'), video = $('video')
+  var poster = $('poster'), titleblock = $('titleblock')
+  var kicker = $('kicker'), title = $('title'), sub = $('sub'), meta = $('meta')
+  var checkState = $('checkState'), syncNum = $('syncNum'), frame = $('frame'), hint = $('hint')
+  var skipBtn = $('skip'), start = $('start'), startBtn = $('startBtn')
+  var replayBtn = $('replay'), deskNote = $('deskNote')
+  var steps = Array.prototype.slice.call(document.querySelectorAll('#steps i'))
+  var dashes = $('dashes')
+  var rows = Array.prototype.slice.call(document.querySelectorAll('.telemetry .row'))
+  var ruleFill = $('ruleFill')
+  var statusHead = $('statusHead'), statusMode = $('statusMode')
+  var factFootRight = $('factFootRight')
+  var sweep = $('sweep')
+  var reticle = $('reticle'), reticleLabel = $('reticleLabel')
+  var openingEl = $('opening'), opCurTop = $('opCurTop'), opCurBottom = $('opCurBottom')
+  var opGlow = $('opGlow'), opCore = $('opCore'), opBrackets = $('opBrackets')
+  var opSmall = $('opSmall'), opBig = $('opBig'), opRule = $('opRule')
+  var opTerm = document.querySelector('.op-term'), opLine1 = $('opLine1'), opLine2 = $('opLine2')
+  var opPing = $('opPing'), opSeam = $('opSeam'), opFlash = $('opFlash')
+  var opBracketEls = Array.prototype.slice.call(document.querySelectorAll('.ob'))
+  var shutterTop = $('shutterTop'), shutterBottom = $('shutterBottom'), seam = $('seam')
+  var powerEl = document.querySelector('.power')
+  var bloomEl = document.querySelector('.bloom')
+  var brandEl = document.querySelector('.brand'), toprightEl = document.querySelector('.topright')
+  var telemetryEl = document.querySelector('.telemetry'), readoutEl = document.querySelector('.readout')
+
+  if (EMBED) document.body.classList.add('embed')
+
+  /* 进度刻度 */
+  var N_DASHES = 24
+  for (var di = 0; di < N_DASHES; di++) dashes.appendChild(document.createElement('i'))
+  var dashEls = Array.prototype.slice.call(dashes.children)
+
+  /* ── 粒子装饰（固定种子，保证截图可复现） ─────────────────────── */
+  var FEATHERS = [
+    { f: 'feather_1.webp', l: '68%', t: '10%', w: 96, op: .20, dur: 21, delay: -13, rot: 18, dx: -70, dy: 150, spin: 26 },
+    { f: 'feather_2.webp', l: '84%', t: '26%', w: 120, op: .16, dur: 26, delay: -21, rot: -10, dx: -110, dy: 190, spin: -18 },
+    { f: 'feather_1.webp', l: '58%', t: '56%', w: 62, op: .13, dur: 18, delay: -6, rot: 38, dx: 60, dy: 130, spin: 20 },
+    { f: 'feather_1.webp', l: '90%', t: '64%', w: 76, op: .12, dur: 23, delay: -16, rot: -26, dx: -60, dy: 160, spin: -24 },
+    { f: 'feather_2.webp', l: '74%', t: '78%', w: 88, op: .10, dur: 28, delay: -24, rot: 12, dx: -90, dy: 120, spin: 16 },
+    { f: 'feather_1.webp', l: '52%', t: '24%', w: 40, op: .09, dur: 16, delay: -9, rot: 52, dx: 40, dy: 90, spin: 30 },
+    { f: 'feather_2.webp', l: '64%', t: '88%', w: 104, op: .10, dur: 24, delay: -18, rot: -34, dx: 80, dy: 110, spin: 22 },
+    { f: 'feather_1.webp', l: '96%', t: '46%', w: 54, op: .09, dur: 20, delay: -11, rot: 8, dx: -50, dy: 140, spin: -20 },
+    { f: 'feather_1.webp', l: '7%', t: '26%', w: 86, op: .11, dur: 27, delay: -19, rot: 14, dx: 60, dy: 150, spin: 22, blur: 1.2 },
+    { f: 'feather_2.webp', l: '34%', t: '86%', w: 92, op: .07, dur: 31, delay: -26, rot: -22, dx: -70, dy: 120, spin: -16, blur: 1.6 },
+    { f: 'feather_1.webp', l: '44%', t: '8%', w: 70, op: .09, dur: 23, delay: -8, rot: 36, dx: 50, dy: 120, spin: 24, blur: .8 }
+  ]
+  var DUST = [
+    { l: '12%', t: '62%', dur: 30, delay: -8, op: .38, dx: 18, dy: -120 },
+    { l: '20%', t: '38%', dur: 36, delay: -19, op: .30, dx: -14, dy: -150 },
+    { l: '28%', t: '72%', dur: 26, delay: -4, op: .42, dx: 22, dy: -100 },
+    { l: '35%', t: '20%', dur: 40, delay: -27, op: .24, dx: -20, dy: -170 },
+    { l: '44%', t: '56%', dur: 32, delay: -13, op: .34, dx: 16, dy: -130 },
+    { l: '52%', t: '80%', dur: 28, delay: -21, op: .30, dx: -18, dy: -110 },
+    { l: '58%', t: '16%', dur: 38, delay: -30, op: .22, dx: 24, dy: -160 },
+    { l: '64%', t: '66%', dur: 24, delay: -6, op: .40, dx: -12, dy: -140 },
+    { l: '72%', t: '28%', dur: 34, delay: -16, op: .28, dx: 20, dy: -180 },
+    { l: '80%', t: '52%', dur: 29, delay: -11, op: .32, dx: -16, dy: -120 },
+    { l: '88%', t: '74%', dur: 37, delay: -24, op: .26, dx: 22, dy: -150 },
+    { l: '6%', t: '46%', dur: 42, delay: -33, op: .20, dx: 14, dy: -190 },
+    { l: '48%', t: '44%', dur: 33, delay: -17, op: .28, dx: -22, dy: -135 },
+    { l: '94%', t: '36%', dur: 35, delay: -28, op: .22, dx: 12, dy: -170 }
+  ]
+  var EMBERS = [
+    { l: '62%', t: '58%', dur: 15, delay: -4, op: .70, dx: 26, dy: -170 },
+    { l: '72%', t: '44%', dur: 19, delay: -9, op: .55, dx: -20, dy: -190 },
+    { l: '81%', t: '66%', dur: 17, delay: -13, op: .60, dx: 34, dy: -150 },
+    { l: '90%', t: '36%', dur: 22, delay: -17, op: .45, dx: -28, dy: -210 },
+    { l: '56%', t: '70%', dur: 14, delay: -2, op: .50, dx: 18, dy: -140 },
+    { l: '68%', t: '30%', dur: 24, delay: -20, op: .40, dx: 40, dy: -230 },
+    { l: '78%', t: '74%', dur: 16, delay: -7, op: .45, dx: -14, dy: -160 },
+    { l: '50%', t: '38%', dur: 21, delay: -15, op: .35, dx: 30, dy: -180 }
+  ]
+  var ambient = $('ambient')
+  FEATHERS.forEach(function (s) {
+    var img = document.createElement('img')
+    img.className = 'feather'
+    img.src = '../lib/assets/layers/' + s.f
+    img.alt = ''
+    img.style.left = s.l; img.style.top = s.t
+    img.style.width = 'clamp(' + Math.round(s.w * 0.55) + 'px,' + (s.w / 19.2).toFixed(2) + 'vw,' + s.w + 'px)'
+    img.style.setProperty('--op', s.op)
+    img.style.setProperty('--dur', s.dur + 's')
+    img.style.setProperty('--delay', s.delay + 's')
+    img.style.setProperty('--rot', s.rot + 'deg')
+    img.style.setProperty('--dx', s.dx + 'px')
+    img.style.setProperty('--dy', s.dy + 'px')
+    img.style.setProperty('--spin', s.spin + 'deg')
+    if (s.blur) img.style.filter = 'blur(' + s.blur + 'px)'
+    ambient.appendChild(img)
+  })
+  EMBERS.forEach(function (s) {
+    var d = document.createElement('i')
+    d.className = 'ember'
+    d.style.left = s.l; d.style.top = s.t
+    d.style.setProperty('--dur', s.dur + 's')
+    d.style.setProperty('--delay', s.delay + 's')
+    d.style.setProperty('--op', s.op)
+    d.style.setProperty('--dx', s.dx + 'px')
+    d.style.setProperty('--dy', s.dy + 'px')
+    ambient.appendChild(d)
+  })
+  DUST.forEach(function (s) {
+    var d = document.createElement('i')
+    d.className = 'dust'
+    d.style.left = s.l; d.style.top = s.t
+    d.style.setProperty('--dur', s.dur + 's')
+    d.style.setProperty('--delay', s.delay + 's')
+    d.style.setProperty('--op', s.op)
+    d.style.setProperty('--dx', s.dx + 'px')
+    d.style.setProperty('--dy', s.dy + 'px')
+    ambient.appendChild(d)
+  })
+
+  /* glints 错开闪烁 */
+  var glints = Array.prototype.slice.call(document.querySelectorAll('.glint'))
+  glints.forEach(function (g, i) {
+    g.style.setProperty('--dur', (3.6 + i * 1.3) + 's')
+    g.style.setProperty('--delay', (-1.1 - i * 1.7) + 's')
+    g.style.setProperty('--op', (0.5 - i * 0.1))
+  })
+
+  /* ── 数学工具 ─────────────────────────────────────────────────── */
+  var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)) }
+  var smooth = function (p) { p = clamp(p, 0, 1); return p * p * (3 - 2 * p) }
+  var easeOut = function (p) { p = clamp(p, 0, 1); return 1 - Math.pow(1 - p, 3) }
+
+  function lerpKeys(keys, t) {
+    if (t <= keys[0][0]) return keys[0][1]
+    for (var i = 1; i < keys.length; i++) {
+      if (t <= keys[i][0]) {
+        var a = keys[i - 1], b = keys[i]
+        var k = (t - a[0]) / Math.max(0.0001, b[0] - a[0])
+        return a[1] + (b[1] - a[1]) * smooth(k)
+      }
+    }
+    return keys[keys.length - 1][1]
+  }
+
+  function actAt(t) {
+    var act = ACTS[0]
+    for (var i = 0; i < ACTS.length; i++) if (t >= ACTS[i].t) act = ACTS[i]
+    return act
+  }
+
+  /* ══ ACT 0 · 黑幕开幕（_p5/design-spec-v3.md §2） ══════════════════
+     全部视觉由 wall clock t 直接驱动（不用 CSS 动画），保证 ?t= 定格
+     在 0.6 / 1.10 等任意时刻可复现；解码用确定性伪随机种子。 */
+  var OP = {
+    coreIn: 0.16, coreInDur: 0.10,
+    pingEnd: 0.22, pingFade: 0.36,
+    smallA: 0.24, smallB: 0.62,
+    bigA: 0.32, bigB: 0.80,
+    line1A: 0.55, line1B: 0.80,
+    line2A: 0.62, line2B: 0.95,
+    bracketA: 0.30, bracketB: 0.82, bracketStep: 0.085,
+    ruleA: 0.72, ruleB: 0.94,
+    dimA: 0.96, dimB: 1.08,
+    flashA: 0.98, flashB: 1.06,
+    seamA: 0.98, seamB: 1.06,
+    openA: 1.02, openB: 1.15,
+    fadeA: 1.15, fadeB: 1.35
+  }
+  var OP_TEXT = {
+    small: 'DEEPSEEK',
+    big: 'HARNESS',
+    line1: 'LOCAL NODE · COLD START',
+    line2: 'BUILD v' + VERSION + ' · PROTOCOL ELISA'
+  }
+  var GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&*+/<>[]{}=_-'
+  function hash32(seed) {
+    var x = seed | 0
+    x ^= x << 13; x ^= x >>> 17; x ^= x << 5
+    return x >>> 0
+  }
+  function glyphAt(seed, index, bucket) {
+    var h = hash32((seed * 2654435761 + index * 40503 + bucket * 7919) | 0)
+    return GLYPHS.charAt(h % GLYPHS.length)
+  }
+  var opSpans = { small: [], big: [] }
+  var opLines = { l1: null, l2: null }
+  function buildDecodeSpans(container, text) {
+    container.innerHTML = ''
+    var spans = []
+    for (var i = 0; i < text.length; i++) {
+      var span = document.createElement('span')
+      span.textContent = text.charAt(i) === ' ' ? '\u00a0' : text.charAt(i)
+      container.appendChild(span)
+      spans.push(span)
+    }
+    // 记录定型字形宽度：解码期随机字符不改变字标总宽（不产生抖动）
+    for (var j = 0; j < spans.length; j++) {
+      var w = spans[j].getBoundingClientRect().width
+      if (w > 0) { spans[j].style.width = w + 'px'; spans[j].style.flex = '0 0 auto' }
+    }
+    return spans
+  }
+  function decodeSpanText(target, spans, t, start, end, seed) {
+    var n = target.length
+    var bucket = Math.floor(t * 24)
+    for (var i = 0; i < n; i++) {
+      var ch = target.charAt(i)
+      if (ch === ' ') continue
+      var settleAt = start + (end - start) * ((i + 0.6) / n)
+      if (t >= settleAt) spans[i].textContent = ch
+      else if (t >= start) spans[i].textContent = glyphAt(seed, i, bucket)
+      else spans[i].textContent = '\u00a0'
+    }
+  }
+  function decodeLineText(target, t, start, end, seed) {
+    var n = target.length
+    var bucket = Math.floor(t * 24)
+    var out = ''
+    for (var i = 0; i < n; i++) {
+      var ch = target.charAt(i)
+      if (ch === ' ') { out += ' '; continue }
+      var settleAt = start + (end - start) * ((i + 0.6) / n)
+      if (t >= settleAt) out += ch
+      else if (t >= start) out += glyphAt(seed, i, bucket)
+      else out += ' '
+    }
+    return out
+  }
+  var openingState = { visible: true, open: 0, core: 1, seam: 0, flash: 0, ping: 0, wordmark: '' }
+  function buildOpening() {
+    opSpans.small = buildDecodeSpans(opSmall, OP_TEXT.small)
+    opSpans.big = buildDecodeSpans(opBig, OP_TEXT.big)
+    opLine1.textContent = ''
+    opLine2.textContent = ''
+    opLines.l1 = document.createElement('span')
+    opLines.l2 = document.createElement('span')
+    opLine1.appendChild(opLines.l1)
+    opLine2.appendChild(opLines.l2)
+    var caret = document.createElement('i')
+    caret.className = 'op-caret'
+    opLine2.appendChild(caret)
+  }
+  function renderOpening(t) {
+    // 字标区淡入 / 0.96s 后压暗
+    var coreIn = smooth(clamp((t - OP.coreIn) / OP.coreInDur, 0, 1))
+    var coreOut = smooth(clamp((t - OP.dimA) / (OP.dimB - OP.dimA), 0, 1))
+    var core = coreIn * (1 - coreOut)
+    opCore.style.opacity = core.toFixed(3)
+    opCore.style.transform = 'translate3d(0,' + (-12 * coreOut).toFixed(2) + 'px,0) scale(' +
+      (1 + 0.014 * coreOut).toFixed(4) + ')'
+
+    // 电源点：0–0.22 脉动，随后淡出
+    var pulse = 0.5 + 0.5 * Math.sin((t / OP.pingEnd) * Math.PI * 2)
+    var pingOp = (t < OP.pingEnd ? 0.35 + 0.65 * pulse : 0) * (1 - smooth(clamp((t - OP.pingEnd) / 0.14, 0, 1)))
+    opPing.style.opacity = pingOp.toFixed(3)
+    opPing.style.transform = 'scale(' + (1 + 1.1 * pingOp).toFixed(3) + ')'
+
+    // 字标 / 终端行解码
+    if (opSpans.small.length) decodeSpanText(OP_TEXT.small, opSpans.small, t, OP.smallA, OP.smallB, 11)
+    if (opSpans.big.length) decodeSpanText(OP_TEXT.big, opSpans.big, t, OP.bigA, OP.bigB, 23)
+    if (opLines.l1) opLines.l1.textContent = decodeLineText(OP_TEXT.line1, t, OP.line1A, OP.line1B, 37)
+    if (opLines.l2) opLines.l2.textContent = decodeLineText(OP_TEXT.line2, t, OP.line2A, OP.line2B, 41)
+    opTerm.style.opacity = smooth(clamp((t - 0.50) / 0.12, 0, 1)).toFixed(3)
+
+    // 四角括号逐边绘制
+    opBrackets.style.opacity = smooth(clamp((t - OP.bracketA) / 0.10, 0, 1)).toFixed(3)
+    for (var i = 0; i < opBracketEls.length; i++) {
+      var bp = smooth(clamp((t - (OP.bracketA + i * OP.bracketStep)) / 0.20, 0, 1))
+      opBracketEls[i].style.setProperty('--d', bp.toFixed(3))
+    }
+
+    // 绯红短横线
+    var ruleP = smooth(clamp((t - OP.ruleA) / (OP.ruleB - OP.ruleA), 0, 1))
+    opRule.style.transform = 'scaleX(' + ruleP.toFixed(3) + ')'
+    opRule.style.opacity = ruleP > 0 ? '1' : '0'
+
+    // 极短白闪（≤8%）
+    var flashOp = 0
+    if (t >= OP.flashA && t <= OP.flashB) {
+      var fk = (t - OP.flashA) / (OP.flashB - OP.flashA)
+      flashOp = fk < 0.32 ? 0.08 * (fk / 0.32) : 0.08 * (1 - (fk - 0.32) / 0.68)
+    }
+    opFlash.style.opacity = flashOp.toFixed(3)
+
+    // 中心 2px 绯红光缝
+    var seamW = t < OP.seamA ? 0 : 0.02 + 0.98 * easeOut(clamp((t - OP.seamA) / (OP.seamB - OP.seamA), 0, 1))
+    var seamOp = t < OP.seamA ? 0 : 0.15 + 0.85 * smooth(clamp((t - OP.seamA) / (OP.seamB - OP.seamA), 0, 1))
+    opSeam.style.transform = 'scaleX(' + seamW.toFixed(4) + ')'
+    opSeam.style.opacity = seamOp.toFixed(3)
+    var glowBase = 0.40 * smooth(clamp((t - 0.20) / 0.34, 0, 1))
+    var glowSeam = 0.52 * smooth(clamp((t - 0.95) / 0.18, 0, 1))
+    opGlow.style.opacity = ((glowBase + glowSeam) *
+      (1 - smooth(clamp((t - OP.fadeA) / 0.20, 0, 1)))).toFixed(3)
+
+    // 上下幕布开幕（ease-in）
+    var openP = clamp((t - OP.openA) / (OP.openB - OP.openA), 0, 1)
+    var openE = Math.pow(openP, 1.55)
+    opCurTop.style.transform = 'translateY(' + (-101 * openE).toFixed(3) + '%)'
+    opCurBottom.style.transform = 'translateY(' + (101 * openE).toFixed(3) + '%)'
+
+    // 1.15 后 200ms 淡出并置 hidden，不再参与后续
+    var fade = smooth(clamp((t - OP.fadeA) / (OP.fadeB - OP.fadeA), 0, 1))
+    openingEl.style.opacity = (1 - fade).toFixed(3)
+    if (fade >= 1) openingEl.classList.add('gone')
+    else openingEl.classList.remove('gone')
+    openingState.visible = fade < 1
+    openingState.open = openE
+    openingState.core = core
+    openingState.seam = seamOp
+    openingState.flash = flashOp
+    openingState.ping = pingOp
+    openingState.wordmark = opSpans.big.length
+      ? opSpans.big.map(function (s) { return s.textContent }).join('')
+      : ''
+  }
+
+  /* ══ HUD 分区进场（1.15+）/ 退场编排（6.62+），JS 驱动 ═══════════ */
+  var HUD_ITEMS = [
+    { el: brandEl, key: 'brand', inDelay: 0.12, outDelay: 0.00, outDir: -1 },
+    { el: toprightEl, key: 'topright', inDelay: 0.22, outDelay: 0.06, outDir: 1 },
+    { el: telemetryEl, key: 'telemetry', inDelay: 0.32, outDelay: 0.12, outDir: -1 },
+    { el: readoutEl, key: 'readout', inDelay: 0.42, outDelay: 0.18, outDir: 1 },
+    { el: titleblock, key: 'titleblock', inDelay: 0.02, outDelay: 0.24, outDir: 0 }
+  ]
+  var hudState = { brand: 0, topright: 0, telemetry: 0, readout: 0, titleblock: 1 }
+  function renderHud(t) {
+    for (var i = 0; i < HUD_ITEMS.length; i++) {
+      var it = HUD_ITEMS[i]
+      if (!it.el) continue
+      var inP = it.noEntry ? 1 : smooth(clamp((t - (T_OPEN + it.inDelay)) / 0.75, 0, 1))
+      var outP = smooth(clamp((t - (EXIT_AT + it.outDelay)) / 0.26, 0, 1))
+      var op = inP * (1 - outP)
+      var ty = (it.noEntry ? 0 : (1 - inP) * 10) + outP * (it.outDir === 0 ? 9 : 2)
+      var tx = outP * it.outDir * 16
+      it.el.style.opacity = op.toFixed(4)
+      it.el.style.transform = 'translate3d(' + tx.toFixed(2) + 'px,' + ty.toFixed(2) + 'px,0)'
+      hudState[it.key] = op
+    }
+  }
+
+  /* 电源横线（1.15–2.20） */
+  var powerState = { scaleX: 0, opacity: 0 }
+  function renderPower(t) {
+    var k = clamp((t - T_OPEN) / 1.05, 0, 1)
+    var sx = smooth(clamp(k / 0.55, 0, 1))
+    var op = k <= 0 ? 0 : (k < 0.16 ? 0.85 * (k / 0.16) : 0.85 * (1 - smooth(clamp((k - 0.55) / 0.45, 0, 1))))
+    if (powerEl) {
+      powerEl.style.transform = 'scaleX(' + sx.toFixed(4) + ')'
+      powerEl.style.opacity = op.toFixed(3)
+    }
+    powerState.scaleX = sx
+    powerState.opacity = op
+  }
+
+  /* 退场幕布合拢（6.78–7.10）与光缝 */
+  var exitState = { shutter: 0, seam: 0 }
+  var shutterProgress = 0
+  function setShutter(e) {
+    shutterProgress = e
+    if (shutterTop) shutterTop.style.transform = 'translateY(' + (-101 * (1 - e)).toFixed(3) + '%)'
+    if (shutterBottom) shutterBottom.style.transform = 'translateY(' + (101 * (1 - e)).toFixed(3) + '%)'
+    exitState.shutter = e
+  }
+  function renderShutters(t) {
+    var p = clamp((t - SHUTTER_AT) / (SHUT_DONE - SHUTTER_AT), 0, 1)
+    setShutter(Math.pow(p, 2.1))            // ease-in 合拢
+    var sop = t < SHUTTER_AT ? 0 : 0.25 + 0.75 * smooth(clamp((t - SHUTTER_AT) / 0.14, 0, 1))
+    if (seam) seam.style.opacity = sop.toFixed(3)
+    exitState.seam = sop
+    if (t >= SHUT_DONE) stage.classList.add('holding')
+  }
+
+  /* ══ 音频接线（spec §4.3/§4.4；B 的 lib/audio.js，存在性守卫） ═══ */
+  var audioApi = window.ELISA_AUDIO || null
+  var audioReady = false
+  var lastAudioSync = -1
+  function initAudio() {
+    if (!audioApi || typeof audioApi.init !== 'function') return
+    try {
+      audioApi.init({
+        src: AUDIO_SRC,
+        chimeSrc: CHIME_SRC,
+        enabled: soundOn,
+        volume: volume / 100,
+        reduced: reduced,
+        rate: SPEED          // 音轨与主时钟同速；audio.js 内 clamp 0.5..1.5 + preservesPitch
+      })
+      audioReady = true
+    } catch (err) { audioReady = false }
+  }
+  function audioStart() {
+    if (!audioReady) return
+    lastAudioSync = -1
+    try { audioApi.start() } catch (err) { /* noop */ }
+  }
+  function audioSyncRate(t) {
+    if (!audioReady) return
+    if (t - lastAudioSync < 0.25) return
+    lastAudioSync = t
+    try { audioApi.sync(t) } catch (err) { /* noop */ }
+  }
+  function audioStop(ms) {
+    if (!audioReady) return
+    try { audioApi.stop(ms) } catch (err) { /* noop */ }
+  }
+  function audioState() {
+    try {
+      if (audioReady) {
+        var st = audioApi.state() || {}
+        st.src = AUDIO_SRC
+        st.previewed = soundOn
+        st.volumeParam = volume
+        return st
+      }
+    } catch (err) { /* noop */ }
+    return {
+      enabled: soundOn, playing: false, blocked: false, volume: volume / 100,
+      currentTime: 0, duration: 0, mode: 'silent', failed: true,
+      rate: SPEED, preservesPitch: true, wallDuration: 0,
+      missing: !audioApi, src: AUDIO_SRC, previewed: soundOn, volumeParam: volume
+    }
+  }
+
+  /* ── 状态 ─────────────────────────────────────────────────────── */
+  var finished = false
+  var phaseKey = ''
+  var phaseLog = []
+  var lastT = 0
+  var wallNow = 0            // 真实墙钟秒（phaseLog[].wall / API.wall 用；?t= 定格时按 t_anim/SPEED 折算）
+  var doneWall = 0           // 结束瞬间的真实墙钟秒（供 QA 精确测总时长）
+  var lastCut = false
+  var exitFired = false
+  var raf = 0
+  var t0 = 0
+  var facts = null
+  var factsReady = false
+  var factPoll = 0
+  var allowSkipConfig = allowSkip
+  if (!allowSkipConfig) skipBtn.hidden = true
+  var naturalTimer = 0
+  var sweepTimer = 0
+  var lastPost = 0
+  var readyPosted = false
+  var goAdded = false
+  var firstSweep = false
+  var reticleLocked = false
+  var PROBE = q.get('probe') === '1'
+  var DONE_AT = 0
+  video.muted = true
+
+  function factText(id, value) {
+    var el = $(id)
+    if (el) el.textContent = (value === null || value === undefined || value === '') ? '—' : String(value)
+  }
+
+  function shortWorkspace(v) {
+    if (!v) return null
+    var s = String(v)
+    return s.length > 18 ? s.slice(0, 17) + '…' : s
+  }
+
+  function applyFacts(f) {
+    if (!f || typeof f !== 'object') return
+    facts = f
+    if (!f.ready) return
+    factsReady = true
+    factText('factProfileTop', f.profile || 'DESKTOP')
+    factText('factBuild', f.version || VERSION)
+    if (factFootRight) {
+      factFootRight.textContent = 'PLUGINS ' + (f.plugins === null || f.plugins === undefined ? '—' : f.plugins) +
+        ' · BUILD ' + (f.version || '—')
+    }
+    // 行值不在这里直写：必须等该行「锁定」时由 fillRow 填入，保留逐项锁定叙事
+    rows.forEach(function (row) {
+      var key = row.getAttribute('data-key')
+      if (row.classList.contains('locked')) fillRow(row, key)
+    })
+  }
+
+  function fillRow(row, key) {
+    var v = row.querySelector('.v')
+    if (!v) return
+    var val = facts && facts[key]
+    if (key === 'workspace') val = shortWorkspace(val)
+    if (val === null || val === undefined || val === '') {
+      v.textContent = '—'
+      row.classList.add('missing')
+    } else {
+      v.textContent = String(val)
+      row.classList.remove('missing')
+    }
+  }
+
+  function loadHostConfig() {
+    if (!EMBED) return Promise.resolve()
+    var timeout = new Promise(function (resolve) { setTimeout(resolve, 260) })
+    var request = fetch('/dsh-elisa/config', { headers: { Accept: 'application/json' } })
+      .then(function (res) { return res.ok ? res.json() : null })
+      .then(function (payload) {
+        if (!payload) return
+        var cfg = payload.config || {}
+        if (cfg.allowSkip === false && !PREVIEW) { allowSkipConfig = false; skipBtn.hidden = true }
+        if (cfg.reducedMotion === true && !PREVIEW) { reduced = true; document.body.classList.add('reduced') }
+        if (cfg.mode && !PREVIEW) { statusMode.textContent = modeLabel[cfg.mode] || cfg.mode.toUpperCase() }
+        applyFacts(payload.facts)
+        if (!payload.facts || payload.facts.ready !== true) pollFacts()
+      })
+      .catch(function () { /* 宿主配置取不到时保留安装包默认值 */ })
+    return Promise.race([request, timeout])
+  }
+
+  function pollFacts() {
+    if (factsReady || factPoll >= 12) {
+      if (!factsReady) {
+        // 宿主 facts 始终未就绪：把已锁定行的 SYNCING 收敛为「—」，避免一直转
+        rows.forEach(function (row) {
+          if (row.classList.contains('locked')) fillRow(row, row.getAttribute('data-key'))
+        })
+      }
+      return
+    }
+    factPoll++
+    setTimeout(function () {
+      if (factsReady) return
+      fetch('/dsh-elisa/config', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null })
+        .then(function (payload) { if (payload && payload.facts) { applyFacts(payload.facts); if (!factsReady) pollFacts() } else pollFacts() })
+        .catch(function () { pollFacts() })
+    }, 160)
+  }
+
+  /* ── 相位切换 ─────────────────────────────────────────────────── */
+  function setPhase(act) {
+    if (act.key === phaseKey) return
+    phaseKey = act.key
+    kicker.textContent = act.kicker
+    title.innerHTML = act.title.replace(/\n/g, '<br>')
+    title.classList.toggle('small', act.title.length > 11)
+    sub.textContent = act.sub
+    meta.textContent = act.meta
+    checkState.textContent = act.check
+    statusHead.textContent = act.head
+    stage.setAttribute('data-phase', act.key)
+    titleblock.classList.remove('enter')
+    void titleblock.offsetWidth
+    titleblock.classList.add('enter')
+    var entry = { key: act.key, t: Math.round(lastT * 1000) / 1000, wall: Math.round(wallNow * 1000) / 1000 }
+    phaseLog.push(entry)
+    if (PROBE) console.log('[elisa-probe] phase ' + act.key + ' @' + lastT.toFixed(3) + ' (wall ' + wallNow.toFixed(3) + ')')
+  }
+
+  function fireSweep() {
+    sweep.classList.remove('go')
+    void sweep.offsetWidth
+    sweep.classList.add('go')
+  }
+
+  /* ── 每帧渲染（wall clock t；超过 TOTAL 保持 7.20 终态） ──────── */
+  function update(t) {
+    var frozen = Math.min(t, TOTAL)
+    lastT = frozen
+    renderOpening(frozen)
+    if (frozen >= OP.openA) stage.classList.add('dawn')
+    var act = actAt(frozen)
+    setPhase(act)
+    if (!goAdded && frozen >= T_OPEN) {
+      goAdded = true
+      stage.classList.add('go', 'booted')
+    }
+    if (frozen >= T_ELISA) stage.classList.add('warm')
+    else stage.classList.remove('warm')
+    renderHud(frozen)
+    renderPower(frozen)
+
+    // 底板：透明度 / 揭幕 / 相机（1.02 开幕后给 ELISA 底板一段可见的 dawn 提升）
+    var reveal = clamp((frozen - REVEAL_A) / (REVEAL_B - REVEAL_A), 0, 1)
+    var hopBase = 0.03 + 0.07 * smooth(clamp(frozen / REVEAL_A, 0, 1))
+    var dawn = 0.18 * smooth(clamp((frozen - OP.openA) / 0.13, 0, 1))
+    var hop = hopBase + dawn * (1 - reveal) + 0.88 * easeOut(reveal)
+    var bloomOp = (0.92 * smooth(clamp((frozen - OP.openA) / 0.10, 0, 1)) +
+      0.08 * smooth(clamp((frozen - T_ELISA) / 0.8, 0, 1))) *
+      (1 - smooth(clamp((frozen - EXIT_AT) / 0.3, 0, 1)))
+    if (bloomEl) bloomEl.style.opacity = Math.min(1, bloomOp).toFixed(3)
+    var prog = clamp(frozen / TOTAL, 0, 1)
+    var cam = 1.045 + 0.048 * smooth(prog)
+    var camx = -7 * smooth(prog)
+    var camy = -4 * smooth(prog)
+    hero.style.setProperty('--hop', hop.toFixed(3))
+    hero.style.setProperty('--reveal', reveal.toFixed(3))
+    hero.style.setProperty('--cam', cam.toFixed(4))
+    hero.style.setProperty('--camx', camx.toFixed(2))
+    hero.style.setProperty('--camy', camy.toFixed(2))
+    hero.classList.toggle('blinds', frozen >= REVEAL_A && frozen < REVEAL_B + 0.05)
+
+    // 主体锁定框：2.70 出现 → 3.65 锁定 → 4.35 收起
+    var showReticle = frozen >= RETICLE_A && frozen < RETICLE_B
+    reticle.classList.toggle('show', showReticle)
+    if (showReticle) {
+      var lock = frozen >= LOCK_AT
+      if (lock !== reticleLocked) {
+        reticleLocked = lock
+        reticle.classList.toggle('locked', lock)
+        if (reticleLabel) {
+          reticleLabel.innerHTML = lock ? '<b>SUBJECT 07</b> · LOCKED' : '<b>SUBJECT 07</b> · TRACKING'
+        }
+      }
+    }
+
+    // 首次光扫（1.95，揭幕中）
+    if (!firstSweep && frozen >= SWEEP_AT) { firstSweep = true; fireSweep() }
+
+    // 档案切片：1.55–2.15 两次闪切
+    var po = 0
+    if (frozen > SCAN_A && frozen < SCAN_B) {
+      var a = (frozen - SCAN_A) / 0.14
+      var b = (frozen - (SCAN_A + 0.26)) / 0.16
+      po = Math.max(
+        smooth(a) * (1 - smooth((frozen - (SCAN_A + 0.16)) / 0.13)),
+        smooth(b) * (1 - smooth((frozen - (SCAN_A + 0.44)) / 0.13))
+      )
+    }
+    poster.style.opacity = Math.max(0, po).toFixed(3)
+
+    // 进度
+    var sync = clamp(lerpKeys(SYNC_KEYS, frozen), 0, 100)
+    syncNum.textContent = sync < 10 ? '0' + Math.round(sync) : String(Math.round(sync))
+    var filled = Math.round(sync / 100 * N_DASHES)
+    for (var i = 0; i < dashEls.length; i++) dashEls[i].className = i < filled ? 'on' : ''
+    var f = clamp(Math.round(prog * 144) + 1, 1, 144)
+    frame.textContent = 'FRAME ' + String(f).padStart(3, '0') + ' / 144 · T+' + frozen.toFixed(2) + 's'
+    ruleFill.style.setProperty('--rule', (0.04 + prog * 0.96).toFixed(3))
+
+    // 步骤刻度
+    var activeStep = 0
+    for (i = 0; i < STEPS.length; i++) if (frozen >= STEPS[i]) activeStep = i
+    for (i = 0; i < steps.length; i++) {
+      steps[i].className = i < activeStep ? 'on' : (i === activeStep ? 'now' : '')
+    }
+    // 左侧轨道刻度随进度点亮
+    var railTicks = document.querySelectorAll('.rail i')
+    for (i = 0; i < railTicks.length; i++) {
+      railTicks[i].classList.toggle('on', frozen / TOTAL > (i + 0.5) / railTicks.length)
+    }
+
+    // 遥测行逐行锁定（2.45–4.20）
+    rows.forEach(function (row) {
+      var lock = parseFloat(row.getAttribute('data-lock'))
+      if (frozen >= lock && !row.classList.contains('locked')) {
+        row.classList.add('locked')
+        if (factsReady) fillRow(row, row.getAttribute('data-key'))
+        else {
+          var v = row.querySelector('.v')
+          if (v) v.textContent = 'SYNCING'
+        }
+      }
+    })
+
+    // 剑光切场（5.35–5.77）
+    var cutting = frozen >= T_CUT && frozen < T_CUT + 0.42
+    if (cutting && !lastCut) {
+      stage.classList.add('cutting')
+      fireSweep()
+    }
+    if (!cutting && lastCut) stage.classList.remove('cutting')
+    lastCut = cutting
+
+    // 退场：6.62 暂停视频 / 关氛围层；6.78 起幕布合拢；7.10 后黑场 + 光缝呼吸
+    if (!exitFired && frozen >= EXIT_AT) {
+      exitFired = true
+      stage.classList.add('exiting')
+      try { video.pause() } catch (e) { /* noop */ }
+    }
+    renderShutters(frozen)
+
+    // 终帧提示（6.28 出现，保持到 titleblock 退场 6.86 起淡出 → 约 0.6s 可读窗口）/ 模式行
+    var hintIn = smooth(clamp((frozen - HINT_AT) / 0.22, 0, 1))
+    var hintOut = smooth(clamp((frozen - (EXIT_AT + 0.24)) / 0.26, 0, 1))
+    hint.style.opacity = (hintIn * (1 - hintOut)).toFixed(3)
+    hint.classList.toggle('show', frozen >= HINT_AT && !finished)
+    var modeLine = document.getElementById('modeLine')
+    if (modeLine) modeLine.textContent = (PREVIEW ? 'PREVIEW SEQUENCE' : 'COLD START SEQUENCE') + ' · 7.2S'
+
+    // 音频对齐（自动播放被拦时供手势补播用）
+    if (audioReady) audioSyncRate(frozen)
+
+    // 与宿主通信：首帧就绪一次 + 进度节流上报
+    if (EMBED) {
+      if (!readyPosted) {
+        readyPosted = true
+        try { parent.postMessage({ type: 'dsh-startup-elisa:ready' }, '*') } catch (e) { /* noop */ }
+      }
+      if (performance.now() - lastPost > 200) {
+        lastPost = performance.now()
+        try {
+          parent.postMessage({
+            type: 'dsh-startup-elisa:progress',
+            t: Math.round(frozen * 1000) / 1000,
+            phase: phaseKey,
+            sync: Math.round(sync),
+            shutter: Math.round(exitState.shutter * 100) / 100
+          }, '*')
+        } catch (e) { /* noop */ }
+      }
+    }
+  }
+
+  /* ── 结束 / 交互 ──────────────────────────────────────────────── */
+  function postDone(reason) {
+    if (!EMBED) return
+    try { parent.postMessage({ type: 'dsh-startup-elisa:done', reason: reason }, '*') } catch (e) { /* noop */ }
+  }
+
+  // skip：iframe 内 220ms 快速合幕，再发 done（宿主交接按 spec 缩短为 480ms）
+  function quickShutter(done) {
+    if (reduced) {
+      setShutter(1)
+      if (seam) seam.style.opacity = '.9'
+      stage.classList.add('holding', 'exiting')
+      setTimeout(done, 40)
+      return
+    }
+    var from = clamp(shutterProgress, 0, 1)
+    var startAt = performance.now()
+    stage.classList.add('exiting')
+    if (seam) seam.style.opacity = '.9'
+    function step() {
+      var k = clamp((performance.now() - startAt) / 220, 0, 1)
+      setShutter(from + (1 - from) * easeOut(k))
+      if (k < 1) requestAnimationFrame(step)
+      else { stage.classList.add('holding'); setTimeout(done, 0) }
+    }
+    step()
+  }
+
+  function finish(reason) {
+    if (finished) return
+    finished = true
+    DONE_AT = performance.now()
+    var wallElapsed = t0 ? (performance.now() - t0) / 1000 : lastT / SPEED
+    doneWall = wallElapsed
+    if (PROBE) console.log('[elisa-probe] done ' + reason + ' @' + (wallElapsed * SPEED).toFixed(3) + ' (wall ' + wallElapsed.toFixed(3) + ')')
+    if (raf) { cancelAnimationFrame(raf); raf = 0 }
+    if (naturalTimer) { clearTimeout(naturalTimer); naturalTimer = 0 }
+    if (sweepTimer) { clearTimeout(sweepTimer); sweepTimer = 0 }
+    try { video.pause() } catch (e) { /* noop */ }
+    hint.classList.remove('show')
+    start.hidden = true
+    audioStop(reason === 'skip' ? 120 : 180)
+    if (EMBED) {
+      if (reason === 'skip') quickShutter(function () { postDone(reason) })
+      else postDone(reason)
+      return
+    }
+    // 离线预览：占位桌面即「宿主 UI」代理，同样走「合幕 → 交叉显影」
+    var reveal = function () {
+      stage.classList.add('finished')
+      var d = $('desktop')
+      if (d) d.setAttribute('aria-hidden', 'false')
+      if (replayBtn) replayBtn.focus({ preventScroll: true })
+    }
+    deskNote.textContent = reason === 'skip'
+      ? '已跳过启动动画。这里是离线预览占位页。'
+      : (reason === 'reduced'
+        ? '已按减弱动态模式静态收束。这里是离线预览占位页。'
+        : '启动层已退出。这里是离线预览占位页。')
+    if (reason === 'skip') {
+      quickShutter(function () {
+        stage.classList.add('finishing')
+        setTimeout(reveal, 160)
+      })
+    } else {
+      stage.classList.add('finishing')
+      setTimeout(reveal, 420)
+    }
+  }
+
+  function skip(reason) {
+    if (finished) return
+    if (!allowSkipConfig) return
+    finish(reason || 'skip')
+  }
+
+  function replay() {
+    if (EMBED) return
+    finished = false
+    lastCut = false
+    phaseKey = ''
+    phaseLog = []
+    exitFired = false
+    firstSweep = false
+    reticleLocked = false
+    goAdded = false
+    lastT = 0
+    wallNow = 0
+    shutterProgress = 0
+    setShutter(0)
+    if (seam) seam.style.opacity = '0'
+    stage.classList.remove('finished', 'finishing', 'cutting', 'warm', 'go', 'dawn', 'exiting', 'holding', 'booted')
+    void stage.offsetWidth
+    var d = $('desktop')
+    if (d) d.setAttribute('aria-hidden', 'true')
+    try { video.currentTime = 0 } catch (e) { /* noop */ }
+    hero.style.setProperty('--hop', '.03')
+    hero.style.setProperty('--reveal', '0')
+    poster.style.opacity = '0'
+    update(0)
+    boot()
+  }
+
+  function tick() {
+    if (finished) return
+    var wall = (performance.now() - t0) / 1000
+    var t = wall * SPEED               // 主时钟：动画秒 = 墙钟秒 × SPEED
+    wallNow = wall
+    if (t >= TOTAL) { update(TOTAL); finish('natural'); return }
+    update(t)
+    raf = requestAnimationFrame(tick)
+  }
+
+  function applyVideoRate() {
+    // 视频底板与主时钟同速；muted，playbackRate 设置失败时静默（降级为原速底板）
+    video.muted = true
+    try { video.loop = false } catch (err) { /* noop */ }
+    try { video.playbackRate = SPEED } catch (err) { /* noop */ }
+  }
+
+  function boot() {
+    if (finished) return
+    t0 = performance.now()
+    lastPost = 0
+    wallNow = 0
+    audioStart()
+    applyVideoRate()
+    var playing = null
+    try { playing = video.play() } catch (err) {
+      if (video.error || video.readyState === 0) { startFallback(); return }
+    }
+    if (playing && typeof playing.then === 'function') {
+      playing.then(function () {
+        start.hidden = true
+        raf = requestAnimationFrame(tick)
+      }).catch(function () {
+        // 视频不可解码/文件缺失：直接走静帧兜底，不卡在「点击开始」
+        if (video.error || video.readyState === 0) { startFallback(); return }
+        start.hidden = false
+        if (startBtn) startBtn.focus({ preventScroll: true })
+      })
+    } else {
+      start.hidden = true
+      raf = requestAnimationFrame(tick)
+    }
+  }
+
+  function startFallback() {
+    // 视频不可用：仍走时间轴，用静帧兜底
+    hero.classList.add('no-video')
+    start.hidden = true
+    if (finished) return
+    t0 = performance.now()
+    wallNow = 0
+    applyVideoRate()
+    if (!audioReady) audioStart()
+    raf = requestAnimationFrame(tick)
+  }
+
+  /* ── 事件 ─────────────────────────────────────────────────────── */
+  skipBtn.addEventListener('click', function (e) {
+    e.stopPropagation()
+    skip('skip')
+  })
+  replayBtn.addEventListener('click', replay)
+  startBtn.addEventListener('click', function () { boot() })
+
+  splash.addEventListener('click', function () {
+    if (finished) return
+    var t = ((performance.now() - t0) / 1000) * SPEED   // 点击阈值按动画秒判定（0.35 契约值不变）
+    if (t < 0.35) return
+    if (hint.classList.contains('show')) { finish('natural'); return }
+    skip('skip')
+  })
+
+  addEventListener('keydown', function (e) {
+    if (finished) {
+      if (e.key === 'r' || e.key === 'R') { e.preventDefault(); replay() }
+      return
+    }
+    if (e.key === 'Escape') { if (allowSkipConfig) { e.preventDefault(); skip('skip') } return }
+    if (hint.classList.contains('show')) { e.preventDefault(); finish('natural') }
+  })
+
+  video.addEventListener('error', function () {
+    if (finished) return
+    hero.classList.add('no-video')
+    if (!t0 && debugT === null && !reduced) startFallback()
+  })
+  video.addEventListener('stalled', function () { /* 保持静帧，不阻塞时间轴 */ })
+
+  /* ── 初始化 ───────────────────────────────────────────────────── */
+  document.getElementById('modeLine').textContent = (PREVIEW ? 'PREVIEW SEQUENCE' : 'COLD START SEQUENCE') + ' · 7.2S'
+
+  function renderDebug(t) {
+    try {
+      if (!reduced) {
+        video.currentTime = Math.min(5.95, Math.max(0, t))
+        video.pause()
+      } else {
+        hero.classList.add('no-video')
+        hero.classList.remove('blinds')
+      }
+    } catch (err) { /* noop */ }
+    wallNow = t / SPEED
+    update(t)
+    // 截图用：把当前所有 CSS 动画暂停在指定毫秒，便于审片定格
+    if (q.has('freezeAnim')) {
+      var freezeMs = parseFloat(q.get('freezeAnim')) || 0
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          document.getAnimations().forEach(function (a) {
+            try { a.pause(); a.currentTime = freezeMs } catch (err) { /* noop */ }
+          })
+        })
+      })
+    }
+    if (autoskip !== null) setTimeout(function () { skip('skip') }, autoskip * 1000)
+  }
+
+  async function init() {
+    buildOpening()
+    await loadHostConfig()
+    announceReady()
+    if (!EMBED) {
+      // 离线预览：固定演示 facts，保证 HUD 的「逐项锁定」可见；版本取真实注入值
+      applyFacts({ ready: true, profile: 'desktop', model: 'deepseek-flash', workspace: 'dsh-startup-elisa',
+        bundleCount: 22, sandbox: 'workspace-write', sessions: 3, plugins: 4, version: VERSION })
+    }
+    initAudio()
+    if (reduced) document.body.classList.add('reduced')
+    if (debugT !== null) { renderDebug(debugT); return }
+    if (reduced) {
+      // 减弱动态：静态终帧 + 1.1s 后 done（chime 由 lib/audio.js 按 reduced 模式播放）
+      hero.classList.remove('blinds')
+      audioStart()
+      wallNow = REDUCED_T / SPEED
+      update(REDUCED_T)
+      setTimeout(function () { finish('reduced') }, 1100)
+      return
+    }
+    if (autoskip !== null) setTimeout(function () { skip('skip') }, autoskip * 1000)
+    boot()
+  }
+
+  // 视频元数据就绪前若已开始计时：失败时用静帧继续
+  video.addEventListener('canplay', function () { hero.classList.remove('no-video') })
+
+  function announceReady() {
+    if (!EMBED || readyPosted) return
+    readyPosted = true
+    try { parent.postMessage({ type: 'dsh-startup-elisa:ready' }, '*') } catch (e) { /* noop */ }
+  }
+
+  window.__DSH_ELISA_PREVIEW__ = {
+    version: VERSION,
+    total: TOTAL,
+    timeline: {
+      T_OPEN: T_OPEN, T_ELISA: T_ELISA, T_HANDSHAKE: T_HANDSHAKE, T_CUT: T_CUT,
+      T_ONLINE: T_ONLINE, HINT_AT: HINT_AT, EXIT_AT: EXIT_AT, SHUTTER_AT: SHUTTER_AT, TOTAL: TOTAL
+    },
+    get t() {
+      // 动画秒（主时钟 t_anim = wall * SPEED；?t= 定格直接返回定格值）
+      if (debugT !== null) return Math.min(debugT, TOTAL)
+      return t0 ? ((performance.now() - t0) / 1000) * SPEED : 0
+    },
+    get wall() {
+      // 真实墙钟秒（phaseLog[].wall 同口径；?t= 定格按 t_anim/SPEED 折算）
+      if (debugT !== null) return Math.round(debugT / SPEED * 1000) / 1000
+      return t0 ? (performance.now() - t0) / 1000 : 0
+    },
+    get totalWall() { return TOTAL_WALL },
+    get doneWall() { return doneWall },
+    get speed() { return splashSpeed },
+    get speedFactor() { return SPEED },
+    get impactFactor() { return IMPACT },
+    get phase() { return stage.getAttribute('data-phase') },
+    get finished() { return finished },
+    get reduced() { return reduced },
+    get facts() { return facts },
+    get audio() { return audioState() },
+    get opening() {
+      return {
+        visible: openingState.visible, open: openingState.open, core: openingState.core,
+        seam: openingState.seam, flash: openingState.flash, ping: openingState.ping,
+        wordmark: openingState.wordmark
+      }
+    },
+    get exit() {
+      return { hud: hudState, shutter: exitState.shutter, seam: exitState.seam }
+    },
+    get params() {
+      return {
+        embed: EMBED, preview: PREVIEW, sound: soundOn, volume: volume, version: VERSION, reduced: reduced,
+        speed: splashSpeed, totalWall: TOTAL_WALL
+      }
+    },
+    get phaseLog() { return phaseLog.slice() },
+    skip: function () { skip('skip') }
+  }
+
+  init()
+})()
+</script>
+</body>
+</html>

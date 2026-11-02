@@ -1,0 +1,59 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: pin npm
+        run: npm install -g npm@11.19.0
+      - name: verify tag matches package version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          node -e "const p=require('./package.json');const m=require('./release.json');if(process.env.TAG!=='v'+p.version||m.version!==p.version||m.tag!==process.env.TAG){console.error('tag/release.json/package.json 不一致');process.exit(1)}"
+      - name: smoke
+        run: npm test
+      - name: public checks
+        run: npm run check
+      - name: rebuild and verify manifest
+        run: node scripts/build-release.mjs --mode source --verify-manifest
+      - name: publish assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          cat > release-notes.md <<EOF
+          ## dsh-startup-elisa v${version}
+
+          本 Release 提供可复现的 **source 包**：插件代码、测试、预览、程序化音轨与全量文档。
+
+          - 资产：\`dsh-startup-elisa-${version}.tgz\`
+          - 校验：\`SHA256SUMS\` / \`SHA512SUMS\` / \`release.json\`
+          - 安装：先完全退出 DSH，再运行 \`dsh plugin --profile desktop add <tgz>\`
+          - 一键安装：\`node scripts/install.mjs --version ${version}\`
+
+          **第三方人物视频/海报/图层不随本 Release 分发**；无素材时启动层走静帧降级，
+          皮肤、交接、音轨与设置全部可用。授权边界见 THIRD-PARTY-NOTICES.md。
+          EOF
+          gh release create "$GITHUB_REF_NAME" \
+            "releases/dsh-startup-elisa-${version}.tgz" \
+            "releases/SHA256SUMS" \
+            "releases/SHA512SUMS" \
+            "release.json" \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file release-notes.md

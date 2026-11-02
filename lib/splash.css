@@ -1,0 +1,132 @@
+/* ============================================================================
+ * dsh-startup-elisa — 宿主启动层样式（v0.3.0 · HANDOFF 交接）
+ * ----------------------------------------------------------------------------
+ * 交接（_p5/design-spec-v3.md §3.2，done 起算 850ms；skip 480ms；reduced 300ms；
+ * timeout/error 40ms 快速释放）：
+ *   0ms    iframe 黑场+光缝，root 背景 #06060a
+ *   120ms  root 背景 380ms 变透明；iframe opacity 1→0（420ms）；.elisa-seam 增亮后横向展开
+ *   240ms  html.elisa-enter #root 只动 opacity（0.55→1，620ms）
+ *   260ms  .elisa-wash 通电扫描（380ms，白 5% + 绯红 3%，pointer-events:none）
+ *   850ms  移除 root / html 类 / 装饰与计时器（由 splash.js 执行）
+ * 所有时长用 --elisa-k 缩放（850ms → 1；480/300/40ms 同比缩短）。
+ * ========================================================================== */
+
+html.elisa-lock,
+html.elisa-lock body {
+  overflow: hidden !important;
+}
+
+#dsh-elisa-root.elisa-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  background: #06060a;
+  overflow: hidden;
+  contain: layout paint style;
+  transition: background-color calc(380ms * var(--elisa-k, 1)) ease calc(120ms * var(--elisa-k, 1));
+}
+
+/* 120ms 起背景 380ms 变透明，露出下方真实宿主 UI */
+#dsh-elisa-root.elisa-root.elisa-handoff {
+  background-color: transparent;
+}
+
+/* 首帧就绪前盖一层纯色，避免 iframe 白闪 */
+#dsh-elisa-root.elisa-boot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #06060a;
+  z-index: 2;
+  opacity: 1;
+  transition: opacity calc(200ms * var(--elisa-k, 1)) ease;
+}
+
+#dsh-elisa-root.elisa-handoff.elisa-boot::after {
+  opacity: 0;
+}
+
+#dsh-elisa-root .elisa-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #06060a;
+  opacity: 1;
+  transition: opacity calc(420ms * var(--elisa-k, 1)) ease calc(120ms * var(--elisa-k, 1));
+  outline: none;
+}
+
+#dsh-elisa-root.elisa-handoff .elisa-frame {
+  opacity: 0;
+}
+
+/* 绯红光缝：与 iframe 内 `.seam` 同位（50%），交接时先增亮再横向展开（360ms） */
+#dsh-elisa-root .elisa-seam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0.92;
+  background: linear-gradient(90deg, transparent, rgba(224, 27, 47, 0.9) 7%, #ff5a6b 50%, rgba(224, 27, 47, 0.9) 93%, transparent);
+  box-shadow: 0 0 18px rgba(224, 27, 47, 0.6), 0 0 62px rgba(224, 27, 47, 0.35);
+  transform: scaleX(0.05);
+  transform-origin: center;
+  transition:
+    transform calc(360ms * var(--elisa-k, 1)) cubic-bezier(0.22, 0.8, 0.3, 1) calc(120ms * var(--elisa-k, 1)),
+    box-shadow calc(360ms * var(--elisa-k, 1)) ease calc(120ms * var(--elisa-k, 1));
+}
+
+#dsh-elisa-root.elisa-handoff .elisa-seam {
+  transform: scaleX(1);
+  box-shadow: 0 0 26px rgba(255, 90, 107, 0.8), 0 0 96px rgba(224, 27, 47, 0.5);
+}
+
+/* 通电扫描亮层：260ms 起从顶部扫到下部（380ms，白 5% + 绯红 3%，pointer-events:none） */
+#dsh-elisa-root .elisa-wash {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(224, 27, 47, 0.03) 58%, rgba(0, 0, 0, 0) 100%);
+  transform: translateY(-102%);
+}
+
+#dsh-elisa-root .elisa-wash.go {
+  animation: elisaWash calc(380ms * var(--elisa-k, 1)) ease-out both;
+}
+
+@keyframes elisaWash {
+  0% { opacity: 0; transform: translateY(-102%); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(102%); }
+}
+
+/* 宿主 UI 通电显影：只动 opacity，不动 transform/filter（避免 fixed 定位副作用） */
+html.elisa-enter #root {
+  animation: elisaRootIn calc(620ms * var(--elisa-k, 1)) ease-out both;
+}
+
+@keyframes elisaRootIn {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+
+/* 系统减弱动态（本插件默认不跟随，仅作兜底） */
+@media (prefers-reduced-motion: reduce) {
+  #dsh-elisa-root.elisa-root,
+  #dsh-elisa-root .elisa-frame,
+  #dsh-elisa-root .elisa-seam,
+  #dsh-elisa-root .elisa-boot::after {
+    transition-duration: 120ms;
+    transition-delay: 0ms;
+  }
+}

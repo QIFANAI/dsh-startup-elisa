@@ -1,0 +1,68 @@
+name: Bug 报告
+description: 启动动画、皮肤、音轨、安装或配置异常
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。提交前请确认：已完全重启 DSH；同一 profile 没有其他启动动画插件。
+        **不要在 Issue 里贴 token、profile 内容或本机路径。**
+  - type: input
+    id: version
+    attributes:
+      label: 插件版本
+      description: 例：0.6.0
+    validations:
+      required: true
+  - type: dropdown
+    id: profile
+    attributes:
+      label: DSH profile
+      options:
+        - desktop
+        - web
+    validations:
+      required: true
+  - type: dropdown
+    id: skin
+    attributes:
+      label: 皮肤档位
+      options:
+        - glass
+        - full
+        - accent
+        - off
+        - 不确定
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 有截图/录屏请附上；console 报错请删除本机路径后再贴。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开 DSH ...
+        2. 设置页切到 ...
+        3. 看到 ...
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: Windows 版本 / DSH 版本 / 是否远程桌面或虚拟机 / 显卡
+    validations:
+      required: false

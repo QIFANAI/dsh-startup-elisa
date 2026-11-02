@@ -1,0 +1,945 @@
+/* ============================================================================
+ * dsh-startup-elisa v0.6.0 — DSH 客户端皮肤（skin.css）
+ * ----------------------------------------------------------------------------
+ * 四档：off / accent / full / glass（由 lib/client.js 按 /dsh-elisa/config 注入 html class）
+ *   - off     ：不注入任何样式（html 上无 .dsh-elisa-skin → 本文件零生效，完全原版）
+ *   - accent  ：只替换设计 token：暖黑底 / 纸白字 / ELISA 绯红强调；无纹理无装饰层
+ *   - full    ：accent + 极淡档案终端细节（全部 pointer-events:none 或纯视觉效果）
+ *   - glass   ：accent + 动态主题背景（#dsh-elisa-ambient）+ 整窗毛玻璃 + 玻璃表面细节
+ *               （v0.4 新增；v0.6 FLOW 重做背景呼吸与 composer 整圈流光，
+ *                 规格见 _p8/design-spec-v6.md；主题 aurora/deepsea/violet）
+ *
+ * 硬约束（_p5/design-spec-v3.md §5.2）：
+ *   - 不改变字号、行高、字重、主要字体栈（CJK 可读性优先）
+ *   - 不改布局：不写 position/display/尺寸/padding/margin 类属性（装饰层除外）
+ *   - 错误/成功/警告语义色不挪用绯红（错误仍用宿主红 #f25a5a，成功绿、警告琥珀保持）
+ *   - 正文对比度 ≥4.5:1（暖黑 #0d0d11 上纸白 #f2f0ea ≈17:1，二级 #c9c6bf ≈11.4:1，
+ *     三级 #a9a7a1 ≈8.1:1；绯红强调 #ff6675 ≈6.8:1）
+ *   - 所有新增装饰层 pointer-events:none，且 z-index 低于宿主弹层
+ *
+ * 全部选择器都以 html.dsh-elisa-skin 作用域开头，因此 off 档天然零副作用。
+ * ========================================================================== */
+
+/* ============================================================================
+ * 1. 皮肤私有调色板（只在皮肤作用域内可见；供本文件内部引用）
+ * ========================================================================== */
+html.dsh-elisa-skin,
+html.dsh-elisa-skin body {
+  --dsh-elisa-ink: #08080b;          /* 最深底 */
+  --dsh-elisa-bg: #0d0d11;           /* 主背景 */
+  --dsh-elisa-paper: #f2f0ea;        /* 纸白 */
+  --dsh-elisa-red: #e01b2f;          /* ELISA 绯红（主强调） */
+  --dsh-elisa-red-bright: #ff6675;   /* 绯红亮部（对暗底文字/选中） */
+  --dsh-elisa-red-dim: #b81426;      /* 绯红暗部（按下/描边） */
+}
+
+/* 宿主的 token 有两处声明点：html(:root 的少量) 与 body / body[data-ds-dark-theme]
+ * （实测宿主把 77 + 113 个 --dsw-* 直接声明在 body 上，见 _p5/c-recon5.json）。
+ * 因此所有 token 覆盖都同时落在 html 与 body 上：body 规则特异性 (0,1,2)
+ * 高于宿主的 body[data-ds-dark-theme] (0,1,1)，可稳定覆盖并向下继承。
+ * 另外宿主把页面主底色写死在 body 的内联规则里，这里按皮肤基色覆盖（仍是颜色，不改布局）。 */
+html.dsh-elisa-skin body {
+  background-color: #0d0d11;
+}
+
+
+/* ============================================================================
+ * 2. accent 档：设计 token 映射（覆盖宿主静态色阶 + 少量语义别名）
+ *    令牌名来自 _p5/recon/tokens.json（464 个真实宿主 token 实测）。
+ * ========================================================================== */
+
+/* ── 2.1 宿主灰阶 --dsw-static-neutral-bluish-* → 暖黑 / 纸白 ───────────── */
+html.dsh-elisa-skin,
+html.dsh-elisa-skin body {
+  --dsw-static-neutral-bluish-00: #fdfbf7;
+  --dsw-static-neutral-bluish-50: #f2f0ea;
+  --dsw-static-neutral-bluish-60: #f2f0ea;
+  --dsw-static-neutral-bluish-75: #efece5;
+  --dsw-static-neutral-bluish-100: #e6e2da;
+  --dsw-static-neutral-bluish-150: #e3ded6;
+  --dsw-static-neutral-bluish-200: #ddd8d0;
+  --dsw-static-neutral-bluish-300: #c9c6bf;
+  --dsw-static-neutral-bluish-400: #a9a7a1;
+  --dsw-static-neutral-bluish-500: #94949d;
+  --dsw-static-neutral-bluish-600: #7b7b84;
+  --dsw-static-neutral-bluish-700: #56565e;
+  --dsw-static-neutral-bluish-750: #3a3a41;
+  --dsw-static-neutral-bluish-800: #2b2b31;
+  --dsw-static-neutral-bluish-850: #222227;
+  --dsw-static-neutral-bluish-875: #1a1a1f;
+  --dsw-static-neutral-bluish-900: #131317;
+  --dsw-static-neutral-bluish-950: #0d0d11;
+  --dsw-static-neutral-bluish-1000: #08080b;
+}
+
+/* ── 2.2 宿主非 bluish 中性阶（滚动条 / 行内代码 / 多选底）→ 同一暖灰阶 ──── */
+html.dsh-elisa-skin,
+html.dsh-elisa-skin body {
+  --dsw-static-neutral-400: #a9a7a1;
+  --dsw-static-neutral-500: #94949d;
+  --dsw-static-neutral-550: #6a6a74;
+  --dsw-static-neutral-600: #56565e;
+  --dsw-static-neutral-700: #3a3a41;
+  --dsw-static-neutral-800: #2b2b31;
+  --dsw-static-neutral-850: #222227;
+  --dsw-static-neutral-900: #131317;
+}
+
+/* ── 2.3 品牌蓝阶 --dsw-static-deepseek-* → 绯红阶（v0.3 视觉主强调）─────
+ *     契约：400 #ff6675 / 450 #e01b2f / 500 #b81426
+ *     其余级别按同色相补齐，保证分档正确（浅色档用于混合/高亮，深色档用于选中底） */
+html.dsh-elisa-skin,
+html.dsh-elisa-skin body {
+  --dsw-static-deepseek-50: #fdeef0;
+  --dsw-static-deepseek-100: #fbdade;
+  --dsw-static-deepseek-200: #f9c4ca;
+  --dsw-static-deepseek-300: #ff9aa4;
+  --dsw-static-deepseek-400: #ff6675;
+  --dsw-static-deepseek-450: #e01b2f;
+  --dsw-static-deepseek-500: #b81426;
+  --dsw-static-deepseek-600: #8f1020;
+  --dsw-static-deepseek-700-delete: #6b0c18;
+  --dsw-static-deepseek-800: #3a0f17;
+  --dsw-static-deepseek-900: #2a1013;
+}
+
+/* ── 2.4 文档选区用的蓝阶 → 绯红（selection / 高亮 / 混色）───────────────── */
+html.dsh-elisa-skin,
+html.dsh-elisa-skin body {
+  --dsw-static-blue-50: #fdeef0;
+  --dsw-static-blue-50p: #fdeef0;
+  --dsw-static-blue-75: #fbdade;
+  --dsw-static-blue-100: #f9c4ca;
+  --dsw-static-blue-300: #ff9aa4;
+  --dsw-static-blue-400: #ff8895;
+  --dsw-static-blue-450: #ff6675;
+  --dsw-static-blue-500: #e01b2f;
+  --dsw-static-blue-600: #b81426;
+  --dsw-static-blue-800: #6b0c18;
+  --dsw-static-blue-900: #3a0f17;
+  --dsw-static-blue-950: #2a1013;
+}
+
+/* ── 2.5 语义别名（只改设计性强调；语义色一律不动）────────────────────────
+ *     business-primary  → 绯红亮部（选中态 / 开关 / 分段按钮 / 主按钮描边）
+ *     link              → 亮绯红（暗底对比度 ≥4.5:1，实测 #ff7a85 on #0d0d11 ≈7.7:1）
+ *     onboarding-accent → 绯红
+ *     document-selection→ 绯红 38%
+ *     语义色 error/success/warn 保持宿主原值（不改） */
+html.dsh-elisa-skin,
+html.dsh-elisa-skin body {
+  --dsw-alias-state-business-primary: #ff6675;
+  --dsw-alias-button-info-hover: #ff7f8c;
+  --dsw-alias-link: #ff7a85;
+  --dsw-alias-onboarding-accent: #e01b2f;
+  --dsw-alias-bg-document-selection: color-mix(in srgb, #e01b2f 38%, transparent);
+}
+
+/* ── 2.6 滚动条：暖灰，hover 绯红 40% ────────────────────────────────────── */
+html.dsh-elisa-skin,
+html.dsh-elisa-skin body {
+  --dsw-alias-scrollbar-bg-l1: #3a3a41;
+  --dsw-alias-scrollbar-bg-l2: #56565e;
+  --dsw-alias-scrollbar-hover-l1: #6a6a74;
+  --dsw-alias-scrollbar-hover-l2: rgba(224, 27, 47, 0.4);
+}
+
+/* ── 2.7 圆角收紧：更利落的终端感（4/8/12/16/20/28 → 3/7/10/13/16/20）──── */
+html.dsh-elisa-skin,
+html.dsh-elisa-skin body {
+  --dsw-radius-xs: 3px;
+  --dsw-radius-sm: 7px;
+  --dsw-radius-md: 10px;
+  --dsw-radius-lg: 13px;
+  --dsw-radius-xl: 16px;
+  --dsw-radius-panel: 20px;
+}
+
+/* ── 2.8 选区与焦点（accent 也有：局部强调，不改布局）────────────────────── */
+html.dsh-elisa-skin ::selection {
+  background: rgba(224, 27, 47, 0.38);
+  color: #f2f0ea;
+}
+html.dsh-elisa-skin :focus-visible {
+  outline-color: #e01b2f;
+}
+
+/* ── 2.9 占位符文字（composer / 输入框）────────────────────────────────────
+ * 宿主原版占位符用 caption 灰（#81858c on 输入框底 ≈3.76:1）；皮肤档提亮到暖灰 -500
+ * （≈5.3:1），只改颜色、不改字号/布局。off 档不生效，保持宿主原样。
+ * 选择器：原生 ::placeholder + 真实宿主里渲染成 span 的占位层（语义后缀 placeholder）。 */
+html.dsh-elisa-skin ::placeholder,
+html.dsh-elisa-skin [class*="placeholder" i] {
+  color: var(--dsw-static-neutral-bluish-500);
+}
+
+/* ============================================================================
+ * 3. full 档：克制的档案终端细节（v3 增强：让有内容页也「看得出皮肤」）
+ *    全部为纯视觉（伪元素/背景层/inset 阴影）；不新增可交互层；pointer-events:none；
+ *    不写 position/display/尺寸/padding/margin；不改字号（只对 caption 级换等宽字体）。
+ *    选择器只用四类稳定钩子：语义标签（header）、role/aria（treeitem/tab/tablist）、
+ *    CSS Modules 的语义后缀（如 _time / _groupTitle，非哈希前缀）。改版失效时自动降级。
+ * ========================================================================== */
+
+/* ── 3.1 全局背景：极淡暖色径向（左下 ember 4.5% / 右上冷蓝 2.5%）──────────
+ *     只加 background-image 层，不改布局；叠加本身 ≤4.5%，不改变正文对比度。 */
+html.dsh-elisa-skin--full body {
+  background-image:
+    radial-gradient(1200px 680px at 6% 112%, rgba(224, 27, 47, 0.045), rgba(224, 27, 47, 0) 62%),
+    radial-gradient(1000px 560px at 94% -8%, rgba(122, 170, 255, 0.025), rgba(122, 170, 255, 0) 60%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+/* ── 3.2 视口顶部 / 左侧 1px 绯红细线（自绘固定层，pointer-events:none）──────
+ *     不走 #root inset 阴影：宿主 .frame 有不透明底色会盖住；固定层 z-index 900
+ *     低于宿主弹层，且不参与命中测试。 */
+html.dsh-elisa-skin--full::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+  background-image:
+    linear-gradient(180deg, rgba(224, 27, 47, 0.34) 0 1px, rgba(224, 27, 47, 0) 1px),
+    linear-gradient(90deg, rgba(224, 27, 47, 0.16) 0 1px, rgba(224, 27, 47, 0) 1px);
+  background-repeat: no-repeat;
+}
+
+/* ── 3.3 极淡档案纹理：3px 扫描线 + SVG 噪点，整体不透明度 0.022 ─────────── */
+html.dsh-elisa-skin--full::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+  opacity: 0.022;
+  mix-blend-mode: soft-light;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(242, 240, 234, 0.9) 0 1px, rgba(242, 240, 234, 0) 1px 3px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+  background-size: auto, 140px 140px;
+}
+
+/* ── 3.4 等宽小标签：只作用于 caption 级元素（正文/代码块保持宿主字体）──────
+ *     实测可复现的语义后缀：
+ *       _time（会话相对时间 10px）/ newSessionShortcut（Ctrl+Alt+N 提示）/ previewBadge（预览版 chip）
+ *       _sectionLabel（侧栏「工作区」小标）/ _groupTitle（插件页「内置插件配置」分区标题）
+ *       _pageIntro（插件页副标题 13px） */
+html.dsh-elisa-skin--full :where(
+  [class*="previewBadge" i],
+  [class*="newSessionShortcut" i],
+  [class*="shortcut" i],
+  [class*="_time" i],
+  [class*="_sectionLabel" i],
+  [class*="_groupTitle" i],
+  [class*="_pageIntro" i]
+) {
+  font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  letter-spacing: 0.04em;
+}
+
+/* ── 3.5 当前项：左侧 3px 绯红渐变竖条 + 极淡绯红底 ────────────────────────
+ *     稳定钩子：会话行 [role="treeitem"][aria-selected="true"]；
+ *     侧栏当前页 [aria-current="page"]（实测「插件」面板行）；
+ *     设置导航 [aria-current="true"] / 语义后缀 navCell+active（aria 缺失时兜底）。
+ *     双层 class 作用域 (0,2,1) 高于宿主选中态类组合（如 .sessionRow.selected (0,2,0)），
+ *     否则宿主的 `background:` 简写会把我们叠加的 background-image 重置为 none。 */
+html.dsh-elisa-skin.dsh-elisa-skin--full :where(
+  [role="treeitem"][aria-selected="true"],
+  [aria-current="page"],
+  [aria-current="true"],
+  [class*="navCell" i][class*="active" i]
+) {
+  box-shadow: inset 3px 0 0 rgba(224, 27, 47, 0.92);
+  background-image: linear-gradient(90deg, rgba(224, 27, 47, 0.15), rgba(224, 27, 47, 0) 72%);
+}
+
+/* ── 3.6 会话页 / 插件页 header：底部 1px 绯红细线（inset 阴影，不加 padding/border）──
+ *     另加当前 tab（对话/轨迹）底部 2px 绯红短线（role="tab"[aria-selected="true"]）。 */
+html.dsh-elisa-skin--full #root header {
+  box-shadow: inset 0 -1px 0 rgba(224, 27, 47, 0.28);
+}
+html.dsh-elisa-skin--full [role="tablist"] [role="tab"][aria-selected="true"] {
+  box-shadow: inset 0 -2px 0 rgba(224, 27, 47, 0.85);
+}
+
+/* ── 3.7 composer 卡片：底部 1px 绯红细线；聚焦（:focus-within）时绯红描边环 ──
+ *     细线用 background-image 叠加（不改卡片自身的 box-shadow / 尺寸）；
+ *     聚焦环用 box-shadow（只在聚焦时接管，失焦自动恢复宿主样式）。 */
+html.dsh-elisa-skin--full :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"]) {
+  background-image: linear-gradient(180deg, rgba(224, 27, 47, 0) calc(100% - 1px), rgba(224, 27, 47, 0.28) calc(100% - 1px));
+  background-repeat: no-repeat;
+}
+html.dsh-elisa-skin--full :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"]):focus-within {
+  box-shadow:
+    0 0 0 1px rgba(224, 27, 47, 0.45),
+    0 10px 30px rgba(0, 0, 0, 0.32);
+}
+
+/* ============================================================================
+ * 4. glass 档（v0.4 新增；P7 BREATH 增补通透度/呼吸/输入框流光；v0.6 FLOW 重做呼吸与流光）
+ * ----------------------------------------------------------------------------
+ * 结构（自底向上，见 _p8/design-spec-v6.md §2.1/§2.2）：
+ *   html 底色 #050409 → #dsh-elisa-ambient（fixed, z-index:-1，4 个极光斑 +
+ *   柔光扫过 + 全屏呼吸光 + 噪点 + 暗角 + 暗帘呼吸 + 边缘呼吸光）→ body 透明 →
+ *   #root 单层 backdrop-filter（整窗毛玻璃）→ 各表面用半透明玻璃令牌 + 高光描边分层。
+ * v0.6 增补（FLOW，用户诉求「背景还是没有呼吸感」「流光要边框本身在流动，不是光点转圈」）：
+ *   - ambient 新增 `.ea-dim`（暗帘呼吸，只降不抬）与 `.ea-rim`（边缘呼吸光）；
+ *     `.ea-breath` 振幅加大、极光斑 glow 谷值下压、漂移加速；
+ *   - composer 边框改为「1.6px 主题底环 + 8s 旋转 conic 光场 + 相位锁定泛光 + 6.4s 呼吸」，
+ *     删除 v0.5 的 offset-path 小光段/steps 位移；
+ *   - 玻璃 alpha 全部乘 `--elisa-glass-a`（html 行内，client.js 写入；默认 1，
+ *     glassTransparency 0→1.45 / 50→1 / 100→0.55；>1 由浏览器自动钳制）；
+ *   - 以上动画同样受 --static（none）与 --paused（paused）降级。
+ *
+ * 硬约束：不改字号/行高/字重/字体栈、不挪布局；装饰层 pointer-events:none；
+ *   语义色（错误/成功/警告）不动；正文对实渲染背景对比度 ≥4.5:1（规格 §4）。
+ * 降级：.dsh-elisa-skin--static → 静态背景；.dsh-elisa-skin--paused → 页面隐藏暂停；
+ *   .dsh-elisa-skin--noblur → 不支持 backdrop-filter 时提高不透明度保可读性。
+ * 主题：html[data-elisa-theme=aurora|deepsea|violet]（--ea-* 变量见 4.3）。
+ * ========================================================================== */
+
+/* ── 4.1 画布兜底与透明化（让动态背景层透出来）──────────────────────────── */
+html.dsh-elisa-skin--glass {
+  background-color: #050409;
+  color-scheme: dark;
+}
+html.dsh-elisa-skin--glass body {
+  background-color: transparent;
+  background-image: none;
+}
+
+/* ── 4.2 整窗毛玻璃（唯一全屏模糊层，规格 §6：backdrop-filter 元素 ≤3）───── */
+html.dsh-elisa-skin--glass #root {
+  backdrop-filter: blur(26px) saturate(150%) brightness(0.96);
+  -webkit-backdrop-filter: blur(26px) saturate(150%) brightness(0.96);
+}
+
+/* ── 4.3 动态主题背景层 ──────────────────────────────────────────────────── */
+/* v0.6 FLOW 背景呼吸重做（用户诉求「背景还是没有呼吸的动态效果」）：
+ *   - 新增 `.ea-dim` 暗帘呼吸层（追加在 vignette 之后）：整窗 8.6s 明暗起伏，峰值只降不升；
+ *   - 新增 `.ea-rim` 视口边缘呼吸光晕（追加在 dim 之后）；
+ *   - `.ea-breath` 单层呼吸振幅加大（opacity .12→.50、scale .92→1.10、8.4s）；
+ *   - 极光斑 glow 谷值下压（0.55→1，峰值不变）+ 漂移加速（22–30s、位移 10–16vmax、scale 幅度 .26）；
+ * 判据：背景可见区 3s 帧差 ≥6/255、固定点整周期亮度峰谷比 ≥1.35；暗帘只降亮度 → 正文对比度安全。 */
+html.dsh-elisa-skin--glass #dsh-elisa-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+  background: #050409;
+  opacity: 1;
+}
+#dsh-elisa-ambient .ea-base {
+  position: absolute;
+  inset: -10%;
+  background:
+    radial-gradient(90% 70% at 18% 8%, rgba(var(--ea-c1), 0.30) 0%, rgba(var(--ea-c1), 0) 60%),
+    radial-gradient(80% 70% at 88% 0%, rgba(var(--ea-c2), 0.26) 0%, rgba(var(--ea-c2), 0) 62%),
+    radial-gradient(120% 100% at 50% 110%, rgba(10, 8, 16, 0.9) 0%, rgba(5, 4, 9, 1) 70%),
+    linear-gradient(180deg, #0b0812 0%, #070610 55%, #050409 100%);
+}
+#dsh-elisa-ambient .ea-blob {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+  mix-blend-mode: screen;
+}
+/* 极光斑：漂移加速（22/26/24/30s，位移 10–16vmax）+ 错相 glow 呼吸（0.45–0.55→1，7.2/8.4/6.8/9.6s）。
+ * 峰值亮度与 P7 持平，谷值下压以放大呼吸差值；只用 transform/opacity，保留 mix-blend-mode: screen。 */
+#dsh-elisa-ambient .ea-b1 {
+  width: 62vmax; height: 62vmax; left: -16vmax; top: -20vmax;
+  background: radial-gradient(circle at 50% 50%, rgba(var(--ea-c1), 0.42) 0%, rgba(var(--ea-c1), 0.14) 34%, rgba(var(--ea-c1), 0) 68%);
+  animation: ea-drift-b1 22s ease-in-out infinite alternate, ea-blob-glow-1 7.2s ease-in-out infinite alternate;
+  animation-delay: 0s, -1.2s;
+}
+#dsh-elisa-ambient .ea-b2 {
+  width: 54vmax; height: 54vmax; right: -14vmax; top: -12vmax;
+  background: radial-gradient(circle at 50% 50%, rgba(var(--ea-c2), 0.40) 0%, rgba(var(--ea-c2), 0.12) 36%, rgba(var(--ea-c2), 0) 70%);
+  animation: ea-drift-b2 26s ease-in-out infinite alternate, ea-blob-glow-2 8.4s ease-in-out infinite alternate;
+  animation-delay: 0s, -3.4s;
+}
+#dsh-elisa-ambient .ea-b3 {
+  width: 70vmax; height: 70vmax; left: 18vmax; bottom: -34vmax;
+  background: radial-gradient(circle at 50% 50%, rgba(var(--ea-c1), 0.21) 0%, rgba(var(--ea-c1), 0.065) 38%, rgba(var(--ea-c1), 0) 72%);
+  animation: ea-drift-b3 24s ease-in-out infinite alternate, ea-blob-glow-3 6.8s ease-in-out infinite alternate;
+  animation-delay: 0s, -2.0s;
+}
+#dsh-elisa-ambient .ea-b4 {
+  width: 40vmax; height: 40vmax; right: 8vmax; bottom: -8vmax;
+  background: radial-gradient(circle at 50% 50%, rgba(var(--ea-c3), 0.16) 0%, rgba(var(--ea-c3), 0.05) 40%, rgba(var(--ea-c3), 0) 74%);
+  animation: ea-drift-b4 30s ease-in-out infinite alternate, ea-blob-glow-4 9.6s ease-in-out infinite alternate;
+  animation-delay: 0s, -7.3s;
+}
+#dsh-elisa-ambient .ea-sheen {
+  position: absolute;
+  inset: -30%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0) 38%, rgba(255, 196, 210, 0.06) 48%, rgba(255, 255, 255, 0) 58%);
+  animation: ea-sheen 22s linear infinite;
+}
+/* 全屏呼吸光（P7 新增、v0.6 加大振幅）：大尺度柔光层，8.4s 单频完整周期（0%↔50%↔100%），
+ * scale 0.92→1.10 + 轻微位移 + opacity 0.10→0.44；与 .ea-dim 同频同相叠加（亮相更亮、暗相更暗）。
+ * 只用 transform/opacity，不加 mix-blend-mode。 */
+#dsh-elisa-ambient .ea-breath {
+  position: absolute;
+  inset: -14%;
+  pointer-events: none;
+  opacity: 0.3;
+  background:
+    radial-gradient(ellipse 95% 75% at 22% 62%, rgba(var(--ea-c1), 0.44) 0%, rgba(var(--ea-c1), 0) 68%),
+    radial-gradient(ellipse 75% 65% at 82% 34%, rgba(var(--ea-c2), 0.36) 0%, rgba(var(--ea-c2), 0) 70%),
+    radial-gradient(ellipse 60% 50% at 55% 90%, rgba(var(--ea-c3), 0.18) 0%, rgba(var(--ea-c3), 0) 72%);
+  animation: ea-breath-x 8.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+#dsh-elisa-ambient .ea-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.8'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+#dsh-elisa-ambient .ea-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(130% 120% at 50% 45%, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.42) 100%);
+}
+/* 暗帘呼吸（v0.6 新增子层，追加在 vignette 之后）：8.4s 单频完整周期，与 .ea-breath/.ea-rim 同频同相叠加。
+ * 峰值只降低背景亮度（中心 -10%、边缘 -50%），不抬亮 → 正文对实渲染背景对比度不会变差；
+ * 呼吸观感 = 「亮层鼓起（50% 处最亮）+ 暗帘退去」与「亮层退去 + 暗帘压下」交替（峰谷差叠加，单频不打架）。 */
+#dsh-elisa-ambient .ea-dim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(130% 120% at 50% 44%,
+      rgba(3, 1, 6, 0.10) 0%,
+      rgba(3, 1, 6, 0.26) 58%,
+      rgba(2, 1, 5, 0.50) 100%);
+  opacity: 0.1;
+  animation: ea-dim-breath 8.4s ease-in-out infinite;
+}
+/* 视口边缘呼吸光晕（v0.6 新增子层，追加在 dim 之后）：暗角反向光，8.4s 同频（亮相同步鼓起） */
+#dsh-elisa-ambient .ea-rim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(140% 120% at 50% 42%,
+      rgba(var(--ea-c1), 0) 54%,
+      rgba(var(--ea-c1), 0.22) 88%,
+      rgba(var(--ea-c2), 0.30) 100%);
+  opacity: 0.22;
+  animation: ea-rim-breath 8.4s ease-in-out infinite;
+}
+
+/* 主题调色板：--ea-c1 主色 / --ea-c2 辅色 / --ea-c3 点色（RGB 三元组） */
+html.dsh-elisa-skin--glass {
+  --ea-c1: 255, 45, 85;
+  --ea-c2: 126, 60, 255;
+  --ea-c3: 34, 211, 238;
+}
+html.dsh-elisa-skin--glass[data-elisa-theme="deepsea"] {
+  --ea-c1: 34, 211, 238;
+  --ea-c2: 79, 70, 229;
+  --ea-c3: 255, 45, 85;
+}
+html.dsh-elisa-skin--glass[data-elisa-theme="deepsea"] #dsh-elisa-ambient .ea-base {
+  background:
+    radial-gradient(90% 70% at 18% 8%, rgba(20, 70, 96, 0.55) 0%, rgba(20, 70, 96, 0) 60%),
+    radial-gradient(80% 70% at 88% 0%, rgba(32, 28, 96, 0.5) 0%, rgba(32, 28, 96, 0) 62%),
+    radial-gradient(120% 100% at 50% 110%, rgba(4, 10, 16, 0.9) 0%, rgba(3, 6, 10, 1) 70%),
+    linear-gradient(180deg, #071018 0%, #050a10 55%, #03060a 100%);
+}
+html.dsh-elisa-skin--glass[data-elisa-theme="violet"] {
+  --ea-c1: 139, 92, 246;
+  --ea-c2: 255, 45, 85;
+  --ea-c3: 34, 211, 238;
+}
+html.dsh-elisa-skin--glass[data-elisa-theme="violet"] #dsh-elisa-ambient .ea-base {
+  background:
+    radial-gradient(90% 70% at 18% 8%, rgba(72, 32, 110, 0.55) 0%, rgba(72, 32, 110, 0) 60%),
+    radial-gradient(80% 70% at 88% 0%, rgba(84, 20, 52, 0.45) 0%, rgba(84, 20, 52, 0) 62%),
+    radial-gradient(120% 100% at 50% 110%, rgba(9, 6, 15, 0.9) 0%, rgba(5, 3, 9, 1) 70%),
+    linear-gradient(180deg, #0c0714 0%, #07050d 55%, #050309 100%);
+}
+
+@keyframes ea-drift-b1 { 0% { transform: translate3d(0, 0, 0) scale(1); } 100% { transform: translate3d(14vmax, 9vmax, 0) scale(1.26); } }
+@keyframes ea-drift-b2 { 0% { transform: translate3d(0, 0, 0) scale(1.06); } 100% { transform: translate3d(-13vmax, 12vmax, 0) scale(0.86); } }
+@keyframes ea-drift-b3 { 0% { transform: translate3d(0, 0, 0) scale(1); } 100% { transform: translate3d(-16vmax, -8vmax, 0) scale(1.22); } }
+@keyframes ea-drift-b4 { 0% { transform: translate3d(0, 0, 0) scale(1.14); } 100% { transform: translate3d(10vmax, -11vmax, 0) scale(0.9); } }
+@keyframes ea-sheen { 0% { transform: translate3d(-18%, 0, 0); } 100% { transform: translate3d(18%, 0, 0); } }
+/* v0.6：极光斑 glow 呼吸谷值下压（峰值与 P7 持平），错相由 duration+负 delay 决定 */
+@keyframes ea-blob-glow-1 { 0% { opacity: 0.55; } 100% { opacity: 1; } }
+@keyframes ea-blob-glow-2 { 0% { opacity: 0.50; } 100% { opacity: 1; } }
+@keyframes ea-blob-glow-3 { 0% { opacity: 0.45; } 100% { opacity: 1; } }
+@keyframes ea-blob-glow-4 { 0% { opacity: 0.55; } 100% { opacity: 1; } }
+/* v0.6：全屏呼吸光单频完整周期（0%↔50%↔100%，与暗帘/边缘光同 8.4s 同相叠加） */
+@keyframes ea-breath-x { 0%, 100% { transform: translate3d(-1.5%, 1%, 0) scale(0.92); opacity: 0.10; } 50% { transform: translate3d(1.5%, -1%, 0) scale(1.10); opacity: 0.44; } }
+/* v0.6：暗帘呼吸（8.4s；0%/100% 最暗、50% 最亮，与呼吸光同相叠加：亮相更亮、暗相更暗；峰值只压暗不抬亮） */
+@keyframes ea-dim-breath { 0%, 100% { opacity: 0.76; } 50% { opacity: 0.10; } }
+/* v0.6：边缘光呼吸（8.4s 同频，亮相同步鼓起） */
+@keyframes ea-rim-breath { 0%, 100% { opacity: 0.10; } 50% { opacity: 0.38; } }
+@keyframes ea-in { 0% { opacity: 0; transform: scale(1.02); } 100% { opacity: 1; transform: scale(1); } }
+
+/* 降级：静态 / 页面隐藏暂停 / 不支持 backdrop-filter
+ * 静态与暂停规则覆盖 #dsh-elisa-ambient 的全部子层（含 P7 新增 .ea-breath 与 blob 呼吸），
+ * 保留 ea-in 交接显影（在 .elisa-enter 且非 static 时生效）。 */
+html.dsh-elisa-skin--glass.dsh-elisa-skin--static #dsh-elisa-ambient *,
+html.dsh-elisa-skin--glass.dsh-elisa-skin--static #dsh-elisa-ambient {
+  animation: none !important;
+}
+html.dsh-elisa-skin--glass.dsh-elisa-skin--paused #dsh-elisa-ambient *,
+html.dsh-elisa-skin--glass.dsh-elisa-skin--paused #dsh-elisa-ambient {
+  animation-play-state: paused !important;
+}
+html.dsh-elisa-skin--glass.dsh-elisa-skin--noblur #root {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* 启动动画 → UI 交接时背景显影（与 splash 的 elisa-enter 配合） */
+html.dsh-elisa-skin--glass.elisa-enter #dsh-elisa-ambient { animation: ea-in 900ms ease-out both; }
+
+/* ── 4.4 玻璃令牌：把宿主表面色映射为半透明 + 提亮描边（P7：全部 alpha 乘通透度变量）
+ *    --elisa-glass-a 由 client.js 写在 html 行内（默认 1；glassTransparency 0→1.65 /
+ *    50→1 / 100→0.35）。alpha>1 由浏览器按 [0,1] 自动钳制，CSS 不再额外 clamp。
+ *    19 个表面令牌 + 3 个模态/菜单选择器（见 4.5）；阴影/描边/blur 不参与缩放。 */
+html.dsh-elisa-skin--glass,
+html.dsh-elisa-skin--glass body {
+  --dsw-alias-bg-base: rgba(9, 7, 13, calc(0.22 * var(--elisa-glass-a, 1)));
+  --dsw-alias-bg-document-preview: rgba(9, 7, 13, calc(0.3 * var(--elisa-glass-a, 1)));
+  --dsw-alias-bg-layer-1: rgba(19, 15, 25, calc(0.36 * var(--elisa-glass-a, 1)));
+  --dsw-alias-bg-layer-2: rgba(26, 21, 33, calc(0.5 * var(--elisa-glass-a, 1)));
+  --dsw-alias-bg-layer-3: rgba(34, 27, 43, calc(0.6 * var(--elisa-glass-a, 1)));
+  --dsw-specific-sidebar-fill: rgba(8, 6, 12, calc(0.42 * var(--elisa-glass-a, 1)));
+  --dsw-specific-input-major: rgba(30, 24, 38, calc(0.52 * var(--elisa-glass-a, 1)));
+  --dsw-specific-menu: rgba(22, 17, 29, calc(0.72 * var(--elisa-glass-a, 1)));
+  --dsw-alias-settings-card-fill: rgba(30, 24, 38, calc(0.5 * var(--elisa-glass-a, 1)));
+  --dsw-alias-button-floating-fill: rgba(30, 24, 38, calc(0.55 * var(--elisa-glass-a, 1)));
+  --dsw-alias-bg-multi-select: rgba(30, 24, 38, calc(0.5 * var(--elisa-glass-a, 1)));
+  --dsw-alias-button-elevated-fill: rgba(52, 44, 62, calc(0.55 * var(--elisa-glass-a, 1)));
+  --dsw-alias-interactive-bg-hover-solid: rgba(52, 44, 62, calc(0.55 * var(--elisa-glass-a, 1)));
+  --dsw-alias-bg-module-platform: rgba(32, 26, 40, calc(0.5 * var(--elisa-glass-a, 1)));
+  --dsw-alias-menu-surface-fill: rgba(20, 16, 27, calc(0.72 * var(--elisa-glass-a, 1)));
+  --dsw-alias-menu-group-header-fill: rgba(30, 24, 38, calc(0.75 * var(--elisa-glass-a, 1)));
+  --dsw-alias-toast-bg: rgba(30, 24, 38, calc(0.8 * var(--elisa-glass-a, 1)));
+  --dsw-alias-tooltip-bg: rgba(30, 24, 38, calc(0.82 * var(--elisa-glass-a, 1)));
+  --dsw-alias-onboarding-card-fill: rgba(30, 24, 38, calc(0.6 * var(--elisa-glass-a, 1)));
+  --dsw-menu-backdrop-filter: blur(40px) saturate(160%);
+  --dsw-elevation-stroke: 0 0 0 .5px rgba(255, 255, 255, 0.10);
+  --dsw-elevation-stroke-color: rgba(255, 255, 255, 0.10);
+  --dsw-elevation-panel: 0 0 0 .5px rgba(255, 255, 255, 0.10), 0 8px 32px rgba(0, 0, 0, 0.35);
+  --dsw-elevation-prominent: 0 0 0 .5px rgba(255, 255, 255, 0.10), 0 12px 44px rgba(0, 0, 0, 0.4);
+  --dsw-shadow-lv3: 0 0 1px 0 rgba(255, 255, 255, 0.10), 0 14px 40px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* 无模糊降级：提高玻璃不透明度，保证可读性（观感近似磨砂亚克力）；
+ * P7：降级值同样乘通透度变量（低配下仍可调，规格 §2.1）。 */
+html.dsh-elisa-skin--glass.dsh-elisa-skin--noblur,
+html.dsh-elisa-skin--glass.dsh-elisa-skin--noblur body {
+  --dsw-alias-bg-base: rgba(9, 7, 13, calc(0.8 * var(--elisa-glass-a, 1)));
+  --dsw-alias-bg-layer-1: rgba(19, 15, 25, calc(0.86 * var(--elisa-glass-a, 1)));
+  --dsw-alias-bg-layer-2: rgba(26, 21, 33, calc(0.9 * var(--elisa-glass-a, 1)));
+  --dsw-alias-bg-layer-3: rgba(34, 27, 43, calc(0.92 * var(--elisa-glass-a, 1)));
+  --dsw-specific-sidebar-fill: rgba(8, 6, 12, calc(0.88 * var(--elisa-glass-a, 1)));
+  --dsw-specific-input-major: rgba(30, 24, 38, calc(0.9 * var(--elisa-glass-a, 1)));
+}
+
+/* ── 4.5 表面细节：高光、描边、分层 ─────────────────────────────────────── */
+
+/* 侧栏：右缘 1px 冷光分隔（inset 阴影，不改布局） */
+html.dsh-elisa-skin--glass [class*="sidebarCol" i] {
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.065), inset 1px 0 0 rgba(255, 255, 255, 0.02);
+}
+
+/* 输入卡：玻璃描边 + 内顶高光 + 悬浮投影；聚焦时绯红光环接管 */
+html.dsh-elisa-skin--glass :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"]) {
+  background-image: none;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.10),
+    0 28px 60px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+html.dsh-elisa-skin--glass :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"]):focus-within {
+  box-shadow:
+    0 0 0 1px rgba(255, 102, 117, 0.42),
+    0 28px 60px rgba(0, 0, 0, 0.45),
+    0 0 22px rgba(224, 27, 47, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* 模态：遮罩压暗 + 轻模糊；面板玻璃更实（避免背景内容穿透干扰阅读）。
+ * P7：遮罩与面板的 alpha 同样乘 --elisa-glass-a（用户点名的「交互页面」：设置弹窗）；
+ * blur 半径/高光描边/投影保持 v0.4 不变（只改 alpha，不改观感结构）。 */
+html.dsh-elisa-skin--glass :where([class*="_mask" i]) {
+  background-color: rgba(4, 3, 8, calc(0.55 * var(--elisa-glass-a, 1)));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+html.dsh-elisa-skin--glass :where([class*="_overlay" i]) :where([class*="_panel" i]) {
+  background-color: rgba(20, 17, 27, calc(0.82 * var(--elisa-glass-a, 1)));
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.10),
+    0 40px 90px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* 浮层/菜单：宿主 material 已是玻璃（背景走 --dsw-menu-surface-fill，见 4.4/4.7 的
+ * calc 缩放；模糊走 --dsw-menu-backdrop-filter=40px），这里统一提亮描边。
+ * 用户点名的「左下账号/用户菜单」：surface/material 的填充 alpha 与菜单项 hover 填充
+ * 均随同一变量缩放，1px 高光描边与 40px 模糊保持不变。 */
+html.dsh-elisa-skin--glass [class*="_material" i],
+html.dsh-elisa-skin--glass :where([class*="menu" i], [role="menu"])[class*="_surface" i] {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.10),
+    0 18px 50px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* 当前项：绯红高光条 + 玻璃面提亮（保留 v0.3 的选中语义，增强光感） */
+html.dsh-elisa-skin--glass :where(
+  [role="treeitem"][aria-selected="true"],
+  [aria-current="page"],
+  [aria-current="true"],
+  [class*="navCell" i][class*="active" i]
+) {
+  background-image: linear-gradient(90deg, rgba(255, 45, 85, 0.22), rgba(255, 45, 85, 0) 78%);
+  box-shadow: inset 3px 0 0 rgba(255, 102, 117, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* header / tab：玻璃细线（inset 阴影，不改布局）。
+ * P7 对比度修复（verifier 抓到 100 档会话页「对话」tab 3.94 / 50 档 4.65）：
+ * header 局部深色兜底（仅背景色，不改布局、不加 backdrop-filter；static/paused/noblur
+ * 均为静态属性、行为不受影响），floor 0.40 保证最通透档 tab 背景亮度有上限；
+ * g0（alphaMul 1.45）时 0.22*1.45=0.319 仍取 0.40，故实际为固定深色顶栏。
+ * 实测（_p7/g/worstcase-*.json）：header 兜底让 tab 区对比度 +0.9~1.2。 */
+html.dsh-elisa-skin--glass #root header {
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+  background-color: rgba(7, 5, 10, max(0.40, 0.22 * var(--elisa-glass-a, 1)));
+}
+html.dsh-elisa-skin--glass [role="tablist"] [role="tab"][aria-selected="true"] {
+  box-shadow: inset 0 -2px 0 rgba(255, 102, 117, 0.85);
+}
+
+/* 滚动条：半透明玻璃色 */
+html.dsh-elisa-skin--glass {
+  --dsw-alias-scrollbar-bg-l1: rgba(255, 255, 255, 0.10);
+  --dsh-scrollbar-thumb-border: 0px;
+}
+
+/* ── 4.6 顶层装饰：顶部 1px 冷光 + 左侧 1px 绯红光缝 + 细颗粒（固定层）───── */
+html.dsh-elisa-skin--glass::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0 1px, rgba(255, 255, 255, 0) 1px),
+    linear-gradient(90deg, rgba(255, 45, 85, 0.20) 0 1px, rgba(255, 45, 85, 0) 1px);
+  background-repeat: no-repeat;
+}
+html.dsh-elisa-skin--glass::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 901;
+  pointer-events: none;
+  opacity: 0.03;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+  background-size: 140px 140px;
+}
+
+/* glass 档不沿用 full 档的扫描线纹理（两者互斥；full 规则只在 --full 生效） */
+
+
+
+/* ── 4.7 glass 固定深色语义：不跟随宿主「浅色」主题 ─────────────────────────
+ * 动态背景与玻璃层级按深色设计。宿主切浅色时，以下 81 个随主题翻转的令牌
+ * 强制回深色主题实测值（0.2.1-rc.5，_p6/lead/theme-token-diff2.json），
+ * 保证任何宿主主题下文字/描边/状态色仍是同一套设计口径。
+ * 注：与 4.4 玻璃令牌重叠的键已排除，避免把半透明玻璃值覆盖回实色。 */
+html.dsh-elisa-skin--glass,
+html.dsh-elisa-skin--glass body {
+  --dsw-alias-settings-card-stroke: #fff3;
+  --dsw-alias-label-document-preview: #c9c6bf;
+  --dsw-alias-bg-mask-1: #00000080;
+  --dsw-alias-bg-mask-2: #0003;
+  --dsw-alias-bg-mask-drop: #272730b3;
+  --dsw-alias-bg-overlay: #56565e;
+  --dsw-alias-bg-skeleton: #ffffff14;
+  --dsw-alias-border-inverted2: #ffffff14;
+  --dsw-alias-border-inverted: #ffffff0f;
+  --dsw-alias-border-l1: #ffffff0f;
+  --dsw-alias-border-l2-darkmode-thin: #ffffff0f;
+  --dsw-alias-border-l2: #ffffff1f;
+  --dsw-alias-border-l3: #ffffff29;
+  --dsw-alias-border-l4: #fff3;
+  --dsw-alias-brand-primary-invert: #f2f0ea;
+  --dsw-alias-brand-primary-new-colorprimary-new-color: #e01b2f;
+  --dsw-alias-brand-primary: #f2f0ea;
+  --dsw-alias-brand-text: #f2f0ea;
+  --dsw-alias-button-contrast-fill: #f2f0ea;
+  --dsw-alias-button-floating-hover: #2b2b31;
+  --dsw-alias-button-ghost-active-border: #7b7b84;
+  --dsw-alias-button-ghost-active-fill: #3a3a41;
+  --dsw-alias-button-ghost-active-hover: #56565e;
+  --dsw-alias-button-info-fill: #ff6675;
+  --dsw-alias-button-primary-dimmed: #3a3a41;
+  --dsw-alias-button-primary-fill: #f2f0ea;
+  --dsw-alias-button-primary-hover: #e6e2da;
+  --dsw-alias-interactive-bg-active: #ffffff24;
+  --dsw-alias-interactive-bg-hover-accent: #ffffff3d;
+  --dsw-alias-interactive-bg-hover-danger: #f25a5a26;
+  --dsw-alias-interactive-bg-hover: rgba(255, 255, 255, calc(0.08 * var(--elisa-glass-a, 1)));
+  --dsw-alias-label-caption: #7b7b84;
+  --dsw-alias-label-deep-diving: color-mix(in srgb, #e01b2f 55%, #a9a7a1);
+  --dsw-alias-label-deep-diving-shimmer: color-mix(in srgb, #ff9aa4 65%, #ff6675);
+  --dsw-alias-label-dimmed: #3a3a41;
+  --dsw-alias-label-primary-bluish: #f2f0ea;
+  --dsw-alias-label-primary-dimmed: #e6e2da;
+  --dsw-alias-label-primary-foreground: #08080b;
+  --dsw-alias-label-primary-inverted: #2b2b31;
+  --dsw-alias-label-primary: #f2f0ea;
+  --dsw-alias-label-secondary: #c9c6bf;
+  --dsw-alias-label-shimmer: color-mix(in srgb, #fff 45%, transparent);
+  --dsw-alias-label-tertiary: #a9a7a1;
+  --dsw-alias-menu-icon: #e6e2da;
+  --dsw-alias-markdown-citation: #2b2b31;
+  --dsw-alias-markdown-code-block-banner: #222227;
+  --dsw-alias-markdown-code-block: #131317;
+  --dsw-alias-markdown-code-segment-selected: #2b2b31;
+  --dsw-alias-markdown-code-segment-unselected: #131317;
+  --dsw-alias-markdown-inline-code: #2b2b31;
+  --dsw-alias-markdown-placeholder: #222227;
+  --dsw-alias-markdown-tag: #222227;
+  --dsw-alias-state-business-tertiary: #3a0f17;
+  --dsw-alias-code-diff-added: #22c55e1f;
+  --dsw-alias-code-diff-deleted: #f25a5a1f;
+  --dsw-alias-file-diff-added-bg: #1f3124;
+  --dsw-alias-file-diff-added-gutter: #132016;
+  --dsw-alias-file-diff-added-marker: #41c977;
+  --dsw-alias-file-diff-deleted-bg: #3c1f1b;
+  --dsw-alias-file-diff-deleted-gutter: #28130e;
+  --dsw-alias-file-diff-deleted-marker: #fa423e;
+  --dsw-alias-state-error-primary: #f25a5a;
+  --dsw-alias-state-idle-primary: #56565e;
+  --dsw-alias-state-success-tertiary: #233c2c;
+  --dsw-alias-state-warn-tertiary: #27241f;
+  --dsw-alias-switch-thumb: #a9a7a1;
+  --dsw-alias-turn-trigger-bg: #ffffff14;
+  --dsw-alias-turn-trigger-bg-hover: #ffffff24;
+  --dsw-specific-bubble-highlight: #3a3a41;
+  --dsw-specific-bubble: #222227;
+  --dsw-specific-login-input: #131317;
+  --dsw-menu-surface-fill: rgba(67, 69, 74, calc(0.45 * var(--elisa-glass-a, 1)));
+  --dsw-specific-selector: #2b2b31;
+  --dsw-specific-sidebar-nav-item-active-accent: #2b2b31;
+  --dsw-specific-sidebar-nav-item-active: #3a3a41;
+  --dsw-specific-sidebar-nav-item-hover: #222227;
+  --dsw-specific-tip: #2b2b31;
+  --dsw-alias-onboarding-secondary-fill: #48494c;
+  --dsw-alias-onboarding-checkbox-border: #ffffff1f;
+  --dsw-linear-gradient-think: linear-gradient(180deg, #151517 20.19%, #15151700 100%);
+  --dsw-linear-think-select: linear-gradient(180deg, #232325 20.19%, #23232500 100%);
+}
+
+/* ── 4.8 composer（聊天输入框）呼吸流光边框（P7 用户点名；v0.6 FLOW 重做为整圈流动）────
+ * 用户反馈（原话）：「流光效果是边框本身的动态环绕，不是找一个光点在那里转圈，看起来很廉价」。
+ * v0.6 方案（单一光源叙事，环 + 泛光相位锁定；删除 v0.5 的 offset-path 小光段与 steps 位移）：
+ *   ::before = 1.6px 主题底环（alpha 0.14–0.20，边框任何时刻都可见）叠加旋转 conic 光场：
+ *              主弧（56° .55 → 66° 白热 .95 → 84° .60 → 120° .22）+ 副弧（208° c3 .45）
+ *              → 读作「光在边框里流动」；角度 8s/圈 linear 旋转（@property 注册角度可插值）；
+ *   ::after  = 同一 conic 的模糊泛光（blur 6px、padding 5px），同角度变量/同时长/同呼吸相位锁定，
+ *              外缘发光随呼吸明灭；
+ *   呼吸     = 环 opacity .50→1（6.4s ease-in-out alternate）+ 泛光 .18→.55（6.4s，同相位）；
+ *              与旋转 8s 互质（合成周期 32s），避免每圈同位置闪。
+ * 布局：宿主卡片已是 position:relative（probe-base.json），不写 position；两伪元素 pointer-events:none，
+ *   不遮挡输入/聚焦环；显式 reset 旧 offset-path/width/height，注入前后卡片 rect 完全一致。
+ * 降级：--static → 动画 none（静态完整光边 + 弱泛光）；--paused → paused；
+ *   无 mask-composite → 环退化为 1px 实色描边（泛光隐藏）。
+ * 性能：角度动画是主线程重绘（Chromium 不会合成注册自定义属性），只作用于两个伪元素（≈0.2MP/帧）；
+ *   blur/filter 均为静态声明，不参与逐帧动画；不新增 backdrop-filter。 */
+@property --ea-flow-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* 亮环：底环 + 旋转光场 + 呼吸（r2 返工：底环提亮到 0.17–0.26、白热前缘降为暖白 0.72 防纯白过曝、
+ * 主弧加宽到 ≈150° 掩盖 conic 在 860×120 上的角速度非均匀；副弧 196° 青） */
+html.dsh-elisa-skin--glass :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"])::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: auto;
+  height: auto;
+  offset-path: none;
+  offset-distance: 0%;
+  offset-rotate: 0deg;
+  border-radius: inherit;
+  padding: 1.6px;
+  pointer-events: none;
+  background-image: conic-gradient(from var(--ea-flow-angle, 0deg),
+    rgba(var(--ea-c1), 0.17) 0deg,
+    rgba(var(--ea-c1), 0.26) 24deg,
+    rgba(var(--ea-c1), 0.46) 50deg,
+    rgba(255, 242, 236, 0.72) 66deg,
+    rgba(var(--ea-c1), 0.54) 88deg,
+    rgba(var(--ea-c1), 0.44) 112deg,
+    rgba(var(--ea-c2), 0.32) 140deg,
+    rgba(var(--ea-c2), 0.24) 168deg,
+    rgba(var(--ea-c3), 0.38) 196deg,
+    rgba(var(--ea-c3), 0.18) 220deg,
+    rgba(var(--ea-c2), 0.22) 244deg,
+    rgba(var(--ea-c1), 0.20) 280deg,
+    rgba(var(--ea-c1), 0.17) 320deg,
+    rgba(var(--ea-c1), 0.17) 360deg);
+  /* oklab 插值渐进增强（旧内核整条声明被丢弃，回退上一条 sRGB 渐变） */
+  background-image: conic-gradient(from var(--ea-flow-angle, 0deg) in oklab,
+    rgba(var(--ea-c1), 0.17) 0deg,
+    rgba(var(--ea-c1), 0.26) 24deg,
+    rgba(var(--ea-c1), 0.46) 50deg,
+    rgba(255, 242, 236, 0.72) 66deg,
+    rgba(var(--ea-c1), 0.54) 88deg,
+    rgba(var(--ea-c1), 0.44) 112deg,
+    rgba(var(--ea-c2), 0.32) 140deg,
+    rgba(var(--ea-c2), 0.24) 168deg,
+    rgba(var(--ea-c3), 0.38) 196deg,
+    rgba(var(--ea-c3), 0.18) 220deg,
+    rgba(var(--ea-c2), 0.22) 244deg,
+    rgba(var(--ea-c1), 0.20) 280deg,
+    rgba(var(--ea-c1), 0.17) 320deg,
+    rgba(var(--ea-c1), 0.17) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.9;
+  animation:
+    ea-flow-spin 8s linear infinite,
+    ea-ring-breath 6.4s ease-in-out infinite alternate;
+}
+
+/* 泛光：同一 conic 的模糊拷贝（相位锁定：同 --ea-flow-angle、同 8s、同 6.4s 呼吸）。
+ * r2 返工：inset:-4px + padding:4px → 光带完全落在卡片外侧（内缘=卡边），消除内侧灰蓝溢雾。 */
+html.dsh-elisa-skin--glass :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"])::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  z-index: 0;
+  width: auto;
+  height: auto;
+  offset-path: none;
+  offset-distance: 0%;
+  offset-rotate: 0deg;
+  border-radius: 24px;
+  padding: 4px;
+  pointer-events: none;
+  background-image: conic-gradient(from var(--ea-flow-angle, 0deg),
+    rgba(var(--ea-c1), 0.20) 0deg,
+    rgba(var(--ea-c1), 0.30) 24deg,
+    rgba(var(--ea-c1), 0.54) 50deg,
+    rgba(255, 242, 236, 0.78) 66deg,
+    rgba(var(--ea-c1), 0.62) 88deg,
+    rgba(var(--ea-c1), 0.52) 112deg,
+    rgba(var(--ea-c2), 0.38) 140deg,
+    rgba(var(--ea-c2), 0.28) 168deg,
+    rgba(var(--ea-c3), 0.44) 196deg,
+    rgba(var(--ea-c3), 0.22) 220deg,
+    rgba(var(--ea-c2), 0.26) 244deg,
+    rgba(var(--ea-c1), 0.24) 280deg,
+    rgba(var(--ea-c1), 0.20) 320deg,
+    rgba(var(--ea-c1), 0.20) 360deg);
+  background-image: conic-gradient(from var(--ea-flow-angle, 0deg) in oklab,
+    rgba(var(--ea-c1), 0.20) 0deg,
+    rgba(var(--ea-c1), 0.30) 24deg,
+    rgba(var(--ea-c1), 0.54) 50deg,
+    rgba(255, 242, 236, 0.78) 66deg,
+    rgba(var(--ea-c1), 0.62) 88deg,
+    rgba(var(--ea-c1), 0.52) 112deg,
+    rgba(var(--ea-c2), 0.38) 140deg,
+    rgba(var(--ea-c2), 0.28) 168deg,
+    rgba(var(--ea-c3), 0.44) 196deg,
+    rgba(var(--ea-c3), 0.22) 220deg,
+    rgba(var(--ea-c2), 0.26) 244deg,
+    rgba(var(--ea-c1), 0.24) 280deg,
+    rgba(var(--ea-c1), 0.20) 320deg,
+    rgba(var(--ea-c1), 0.20) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  filter: blur(7px);
+  opacity: 0.35;
+  animation:
+    ea-flow-spin 8s linear infinite,
+    ea-halo-breath 6.4s ease-in-out infinite alternate;
+}
+
+/* 聚焦时提亮（静态 filter 声明，不参与逐帧动画；static 下同样生效） */
+html.dsh-elisa-skin--glass :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"]):focus-within::before {
+  filter: brightness(1.15) saturate(1.06);
+}
+html.dsh-elisa-skin--glass :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"]):focus-within::after {
+  filter: blur(7px) brightness(1.2) saturate(1.1);
+}
+
+@keyframes ea-flow-spin {
+  0% { --ea-flow-angle: 0deg; }
+  100% { --ea-flow-angle: 360deg; }
+}
+@keyframes ea-ring-breath {
+  0% { opacity: 0.58; }
+  100% { opacity: 1; }
+}
+@keyframes ea-halo-breath {
+  0% { opacity: 0.18; }
+  100% { opacity: 0.55; }
+}
+
+/* 降级①：静态背景（skinMotion=false / reducedMotion=true / 低配）→ 停动画，保留完整静态光边 */
+html.dsh-elisa-skin--glass.dsh-elisa-skin--static :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"])::before {
+  animation: none;
+  opacity: 0.85;
+}
+html.dsh-elisa-skin--glass.dsh-elisa-skin--static :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"])::after {
+  animation: none;
+  opacity: 0.3;
+}
+
+/* 降级②：页面隐藏 → 暂停（与 ambient 同一机制） */
+html.dsh-elisa-skin--glass.dsh-elisa-skin--paused :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"])::before,
+html.dsh-elisa-skin--glass.dsh-elisa-skin--paused :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"])::after {
+  animation-play-state: paused;
+}
+
+/* 降级③：不支持 mask-composite 时环退化为 1px 实色描边（不整块填色、不改布局；泛光隐藏） */
+@supports not ((mask-composite: exclude) or (-webkit-mask-composite: xor)) {
+  html.dsh-elisa-skin--glass :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"])::before {
+    -webkit-mask: none;
+    mask: none;
+    padding: 0;
+    background: none;
+    border: 1px solid rgba(var(--ea-c1), 0.42);
+    animation: none;
+    opacity: 0.9;
+  }
+  html.dsh-elisa-skin--glass :where([class*="composerSeat" i], [class*="composerStack" i]) :where([class*="_card"])::after {
+    content: none;
+  }
+}
