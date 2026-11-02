@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 #  dsh-startup-elisa 0.6.0 —— 无损安装器（「Elisa启动动画+UI皮肤组合包」内）
 #
 #  用法（普通用户 / DSH 代理都适用）：
@@ -71,6 +71,15 @@ function Get-Sha256([string]$p) {
 function Get-RelPath([string]$base, [string]$full) {
   $rel = $full.Substring($base.Length)
   return $rel.TrimStart('\', '/').Replace('\', '/')
+}
+# GNU tar 会把 "E:\..." 当成远程主机；--force-local 关闭该语义（bsdtar 不需要也不支持）
+function Invoke-TarExtract([string]$archive, [string]$destination) {
+  $tarVersion = (& tar --version 2>&1 | Select-Object -First 1)
+  $arch = $archive.Replace('\', '/')
+  $dest = $destination.Replace('\', '/')
+  $tarArgs = @('-xzf', $arch, '-C', $dest)
+  if ("$tarVersion" -match 'GNU tar') { $tarArgs = @('--force-local') + $tarArgs }
+  & tar @tarArgs
 }
 function Read-JsonFile([string]$p) {
   if (-not (Test-Path -LiteralPath $p)) { return $null }
@@ -326,7 +335,7 @@ if ($tar) {
   $checkDir = Join-Path ([System.IO.Path]::GetTempPath()) ("elisa-check-" + (Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
   New-Item -ItemType Directory -Force -Path $checkDir | Out-Null
   $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
-  & tar -xzf $tgz -C $checkDir 2>&1 | Out-Null
+  Invoke-TarExtract $tgz $checkDir 2>&1 | Out-Null
   $tarExit = $LASTEXITCODE
   $ErrorActionPreference = $old
   if ($tarExit -ne 0) { Die "解包 tgz 失败（tar 退出码 $tarExit）" }

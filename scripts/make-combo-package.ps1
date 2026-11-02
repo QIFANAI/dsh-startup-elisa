@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 #  构建「Elisa启动动画+UI皮肤组合包」对话安装包（v0.6.0）
 #
 #  输入：releases\dsh-startup-elisa-<ver>.tgz（不得改动，唯一发布产物）
@@ -47,6 +47,15 @@ function Get-Sha256([string]$p) { return (Get-FileHash -LiteralPath $p -Algorith
 function Get-RelPath([string]$base, [string]$full) {
   return ($full.Substring($base.Length)).TrimStart('\', '/').Replace('\', '/')
 }
+# GNU tar 会把 "E:\..." 当成远程主机；--force-local 关闭该语义（bsdtar 不需要也不支持）
+function Invoke-TarExtract([string]$archive, [string]$destination) {
+  $tarVersion = (& tar --version 2>&1 | Select-Object -First 1)
+  $arch = $archive.Replace('\', '/')
+  $dest = $destination.Replace('\', '/')
+  $tarArgs = @('-xzf', $arch, '-C', $dest)
+  if ("$tarVersion" -match 'GNU tar') { $tarArgs = @('--force-local') + $tarArgs }
+  & tar @tarArgs
+}
 
 # ── 1) 读取发布 tgz 基线 ───────────────────────────────────────────────────
 if (-not (Test-Path -LiteralPath $Tgz)) { throw "缺少发布包：$Tgz（先运行 npm run build）" }
@@ -79,7 +88,7 @@ Write-Host "[2/6] 暂存目录组装 OK  $Stage" -ForegroundColor Green
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("elisa-combo-" + (Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 try {
-  & tar -xzf $Tgz -C $tmp
+  Invoke-TarExtract $Tgz $tmp
   if ($LASTEXITCODE -ne 0) { throw "解包 tgz 失败（tar 退出码 $LASTEXITCODE）" }
   $pkgDir = Join-Path $tmp 'package'
   $files = Get-ChildItem -LiteralPath $pkgDir -Recurse -File | ForEach-Object {
