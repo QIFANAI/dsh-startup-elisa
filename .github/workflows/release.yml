@@ -40,7 +40,7 @@ jobs:
           ## dsh-startup-elisa v${version}
 
           本 Release 提供可复现的**完整素材包**：插件代码、测试、预览、程序化音轨、全量文档，
-          以及 ELISA 人物视频 / 海报 / 图层（16 个文件，`release.json` 声明 `mediaIncluded=true`）。
+          以及 ELISA 人物视频 / 海报 / 图层（16 个文件，\`release.json\` 声明 \`mediaIncluded=true\`）。
 
           - 资产：\`dsh-startup-elisa-${version}.tgz\`
           - 校验：\`SHA256SUMS\` / \`SHA512SUMS\` / \`release.json\`
