@@ -39,15 +39,17 @@ jobs:
           cat > release-notes.md <<EOF
           ## dsh-startup-elisa v${version}
 
-          本 Release 提供可复现的 **source 包**：插件代码、测试、预览、程序化音轨与全量文档。
+          本 Release 提供可复现的**完整素材包**：插件代码、测试、预览、程序化音轨、全量文档，
+          以及 ELISA 人物视频 / 海报 / 图层（16 个文件，`release.json` 声明 `mediaIncluded=true`）。
 
           - 资产：\`dsh-startup-elisa-${version}.tgz\`
           - 校验：\`SHA256SUMS\` / \`SHA512SUMS\` / \`release.json\`
           - 安装：先完全退出 DSH，再运行 \`dsh plugin --profile desktop add <tgz>\`
           - 一键安装：\`node scripts/install.mjs --version ${version}\`
 
-          **第三方人物视频/海报/图层不随本 Release 分发**；无素材时启动层走静帧降级，
-          皮肤、交接、音轨与设置全部可用。授权边界见 THIRD-PARTY-NOTICES.md。
+          **素材随本 Release 完整分发**：权利归各自权利人，代码的 MIT 授权不覆盖素材；
+          再分发、商用或公开演示前请自行确认授权，权利人异议可开 Issue。
+          授权边界见 THIRD-PARTY-NOTICES.md。
           EOF
           gh release create "$GITHUB_REF_NAME" \
             "releases/dsh-startup-elisa-${version}.tgz" \

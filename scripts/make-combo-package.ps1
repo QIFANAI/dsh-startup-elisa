@@ -1,5 +1,5 @@
 ﻿# ============================================================================
-#  构建「Elisa启动动画+UI皮肤组合包」对话安装包（v0.6.0）
+#  构建「Elisa启动动画+UI皮肤组合包」对话安装包（v0.6.1）
 #
 #  输入：releases\dsh-startup-elisa-<ver>.tgz（不得改动，唯一发布产物）
 #        combo\ 下的源文件（00/01 说明 + tools\*.ps1）
@@ -12,14 +12,14 @@
 #
 #  用法：
 #    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\make-combo-package.ps1
-#    powershell ... -File scripts\make-combo-package.ps1 -Version 0.6.0
+#    powershell ... -File scripts\make-combo-package.ps1 -Version 0.6.1
 #    powershell ... -File scripts\make-combo-package.ps1 -ExpectedSha256 <发布页记录的SHA256>
 #    powershell ... -File scripts\make-combo-package.ps1 -OutFile D:\tmp\test.zip
 #  退出码：0 = OK；非 0 = 失败
 # ============================================================================
 [CmdletBinding()]
 param(
-  [string]$Version = '0.6.0',
+  [string]$Version = '0.6.1',
   [string]$OutFile,
   [string]$WorkRoot,
   [string]$ExpectedSha256,

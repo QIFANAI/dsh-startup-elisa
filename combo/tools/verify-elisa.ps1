@@ -1,5 +1,5 @@
 ﻿# ============================================================================
-#  dsh-startup-elisa 0.6.0 —— 安装完整性核验器（「Elisa启动动画+UI皮肤组合包」内）
+#  dsh-startup-elisa 0.6.1 —— 安装完整性核验器（「Elisa启动动画+UI皮肤组合包」内）
 #
 #  用法：
 #    powershell -NoProfile -ExecutionPolicy Bypass -File verify-elisa.ps1
@@ -7,7 +7,7 @@
 #    powershell -NoProfile -ExecutionPolicy Bypass -File verify-elisa.ps1 -Json
 #
 #  只读：不修改任何文件。退出码 0 = PASS，1 = FAIL，2 = 前置条件不满足。
-#  核验口径：版本 0.6.0 / 包内全部文件 SHA256 与 校验清单.sha256 逐一一致 / profile bundles 含插件。
+#  核验口径：版本 0.6.1 / 包内全部文件 SHA256 与 校验清单.sha256 逐一一致 / profile bundles 含插件。
 # ============================================================================
 [CmdletBinding()]
 param(
@@ -21,7 +21,7 @@ $ErrorActionPreference = 'Stop'
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 
 $PkgName         = 'dsh-startup-elisa'
-$ExpectedVersion = '0.6.0'
+$ExpectedVersion = '0.6.1'
 $ExpectedFiles   = 0
 
 function Die2([string]$msg, [int]$code = 2) {
@@ -127,7 +127,7 @@ if ($Json) {
   ($out | ConvertTo-Json -Depth 6)
 } else {
   Write-Host "================================================================" -ForegroundColor Cyan
-  Write-Host (" dsh-startup-elisa 0.6.0 安装核验  [" + $Profile + "]  " + $installedDir) -ForegroundColor Cyan
+  Write-Host (" dsh-startup-elisa 0.6.1 安装核验  [" + $Profile + "]  " + $installedDir) -ForegroundColor Cyan
   Write-Host "================================================================" -ForegroundColor Cyan
   foreach ($c in $checks) {
     if ($c.ok) { Write-Host ("  [PASS] " + $c.name + " — " + $c.detail) -ForegroundColor Green }

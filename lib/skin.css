@@ -1,5 +1,5 @@
 /* ============================================================================
- * dsh-startup-elisa v0.6.0 — DSH 客户端皮肤（skin.css）
+ * dsh-startup-elisa v0.6.1 — DSH 客户端皮肤（skin.css）
  * ----------------------------------------------------------------------------
  * 四档：off / accent / full / glass（由 lib/client.js 按 /dsh-elisa/config 注入 html class）
  *   - off     ：不注入任何样式（html 上无 .dsh-elisa-skin → 本文件零生效，完全原版）

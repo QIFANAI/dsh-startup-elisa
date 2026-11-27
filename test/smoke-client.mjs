@@ -105,7 +105,7 @@ function makeEnv(opts = {}) {
       ok: true,
       json: () => Promise.resolve({
         ok: true,
-        version: '0.6.0',
+        version: '0.6.1',
         config: Object.assign({ enabled: false, mode: 'session', allowSkip: true, reducedMotion: false, sound: true, volume: 65, skin: 'glass', skinTheme: 'aurora', skinMotion: true, glassTransparency: 50, splashSpeed: 80 }, opts.configPayload || {}),
         facts: { profile: 'WEB', ready: true },
         file: 'X',
@@ -182,7 +182,7 @@ const hostTree = mount.registrations[0].render()
 const tree = typeof hostTree.type === 'function' ? hostTree.type(hostTree.props) : hostTree
 check('Panel 可渲染（loading 分支）', () => assert.equal(typeof tree, 'object'))
 check('Panel 含标题', () => assert.match(JSON.stringify(tree), /ELISA 启动动画/))
-check('Panel 版本 chip v0.6.0', () => assert.match(JSON.stringify(tree), /v0\.6\.0/))
+check('Panel 版本 chip v0.6.1', () => assert.match(JSON.stringify(tree), /v0\.6\.1/))
 
 console.log('[3] 皮肤：hint 同步 / config 异步 / 四档 class / glass 背景层')
 env = makeEnv({ config: { enabled: true, skin: 'glass', skinTheme: 'deepsea', skinMotion: true } })
@@ -210,7 +210,7 @@ check('hint glass 写入 --elisa-glass-a=1（通透度 50 基准）', () => {
 check('皮肤样式 link 注入', () => {
   const link = findLink(env)
   assert.ok(link)
-  assert.match(link.href, /\/dsh-elisa\/skin\.css\?v=0\.6\.0/)
+  assert.match(link.href, /\/dsh-elisa\/skin\.css\?v=0\.6\.1/)
   assert.equal(link.rel, 'stylesheet')
 })
 check('__DSH_ELISA_SKIN__ 状态发布（glass）', () => {
@@ -312,7 +312,7 @@ await flush()
 check('异步 config 通透度生效（75 → 0.775）', () => assert.equal(env.html.style.getPropertyValue('--elisa-glass-a'), '0.775'))
 
 console.log('[4] 设置页 v0.5 文本契约（serializeConfig / 声音 / 外观皮肤 / 主题 / 动效 / 速度 / 通透度）')
-check('FALLBACK_VERSION=0.6.0', () => assert.match(src, /FALLBACK_VERSION = '0\.6\.0'/))
+check('FALLBACK_VERSION=0.6.1', () => assert.match(src, /FALLBACK_VERSION = '0\.6\.1'/))
 check('FALLBACK 含 sound/volume/skin/theme/motion/glassTransparency/splashSpeed', () => {
   assert.match(src, /sound:\s*true/)
   assert.match(src, /volume:\s*65/)

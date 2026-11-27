@@ -3,6 +3,25 @@
 版本号遵循语义化版本；`v0.6.0` 起在本仓库公开发布。完整设计与验收记录见
 `docs/design/` 与 `docs/history/`。
 
+## 0.6.1 · 2026-11-27 · 完整素材开源版
+
+- 仓库与官方 Release 改为**完整人物素材开源**：`hero-loop.mp4`（3.99 MB）/
+  `hero-poster.webp`（383 KB）/ `archive-poster.webp`（192 KB）与 `layers/` 下 13 个 WebP
+  （翼光 2、羽毛 2、引导线 3、螺旋 3、光环、星点、剑光）共 **16 个文件 / 5,122,255 B**
+  随仓库提交，与维护者本机完整包逐字节一致；
+- `.gitignore` 不再排除 `lib/assets/*`（改为只忽略本机目录 `_video/` 与根目录演示视频）；
+  `check-public` 删除「未跟踪第三方媒体」门禁，改为校验 16 个素材全部入库；
+  `build-release` 的 source 包改为**必须包含全部 16 个素材**，`release.json` 声明
+  `mediaIncluded=true`；
+- README / INSTALL / THIRD-PARTY-NOTICES / `lib/assets/README.md` / MAINTAIN / CONTRIBUTING /
+  combo 文档与 `cordis.patch.yml` 同步完整开源口径：素材随仓库与 Release 完整发布，
+  权利归各自权利人，代码 MIT 不覆盖素材，再分发前自行确认授权，权利人异议可开 Issue；
+- 素材缺失时的降级链保持不变（静帧 / 无视频分支），无素材环境仍可完整运行；
+- 版本引用同步到 0.6.1：`package.json` / README / INSTALL / 预览默认版本 /
+  客户端与音轨版本常量 / 测试断言；
+- 验证：`npm test`（123 + 164 + 90 + 80 + 40 = 497 PASS）、`npm run check`、
+  `npm run build -- --write-manifest`；`tar -tzf` 确认 tgz 含全部 16 个素材文件。
+
 ## 0.6.0 · FLOW（2026-11-02）
 
 - **背景呼吸 v2**：ambient 由 9 层增至 **11 层**（新增 `.ea-dim` 暗帘呼吸 + `.ea-rim`

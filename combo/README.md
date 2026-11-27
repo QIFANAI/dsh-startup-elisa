@@ -20,7 +20,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\make-combo-package.p
 
 脚本会：
 
-1. 读取 `releases/dsh-startup-elisa-0.6.0.tgz` 的 SHA256/大小（可用 `-ExpectedSha256` 对照 Release 页）；
+1. 读取 `releases/dsh-startup-elisa-0.6.1.tgz` 的 SHA256/大小（可用 `-ExpectedSha256` 对照 Release 页）；
 2. 解包生成 `校验清单.sha256`（包内全部文件 + tgz 基线）；
 3. 把 `.ps1` 统一为 UTF-8 with BOM；用 7z（没有则回落 .NET ZipFile）打成
    `Elisa启动动画+UI皮肤组合包.zip`；
@@ -28,15 +28,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\make-combo-package.p
 
 产物 **不入库**（`*.zip` 在 `.gitignore` 中），发布时按需分发。
 
-## 公开包与本地完整包
+## 公开 Release 包与本地 -full 包
 
-- **公开 source 包**（GitHub Release）：代码、文档、测试、程序化音轨；不含第三方人物视频/海报/图层。
-  装完后启动层走静帧降级，皮肤与设置全部可用。
-- **本地完整包**：维护者自备人物素材后 `npm run build:full` 得到 `*-full.tgz`，
-  只许本机使用，禁止上传。两种包都能用同一套组合包脚本组装；
-  安装器不再绑定固定哈希，一律按包内 `校验清单.sha256` 校验。
+- **公开 Release 包**（GitHub Release）：代码、文档、测试、程序化音轨，
+  **并含完整人物视频/海报/图层**（自 0.6.1 起，`release.json` 声明 `mediaIncluded=true`）。
+- **本地 `-full` 包**：`npm run build:full` 兼容保留，内容与 source 包相同。
+  两种包都能用同一套组合包脚本组装；安装器不再绑定固定哈希，
+  一律按包内 `校验清单.sha256` 校验。
 
 ## 素材边界
 
-人物素材授权边界见根目录 [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md)；
-自备素材的方法见 [lib/assets/README.md](../lib/assets/README.md)。
+人物素材权利归各自权利人，代码 MIT 不覆盖素材；再分发前请自行确认授权。
+权威声明见根目录 [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md)；
+素材规格与替换方法见 [lib/assets/README.md](../lib/assets/README.md)。

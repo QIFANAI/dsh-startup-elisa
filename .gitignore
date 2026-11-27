@@ -13,6 +13,7 @@ _p7/
 _p8/
 _shots*/
 _work/
+_video/
 _开工简报*
 _开工简报.历史/
 _项目卡.md
@@ -31,19 +32,13 @@ releases/SHA256SUMS*
 releases/SHA512SUMS*
 *.zip
 
-# ── 第三方人物素材（版权边界见 THIRD-PARTY-NOTICES.md）────────────
-# Wallpaper Engine 工坊场景 3808922316 渲染的人物视频、海报与图层只限本机自用，
-# 禁止上传或公开分发；公开仓库只保留代码、文档与程序化合成的音频。
-lib/assets/hero-loop.mp4
-lib/assets/hero-poster.webp
-lib/assets/archive-poster.webp
-lib/assets/layers/
-lib/assets/*.mp4
-lib/assets/*.webm
-lib/assets/*.webp
-lib/assets/*.jpg
-lib/assets/*.png
-!lib/assets/README.md
+# ── 第三方人物素材：自 0.6.1 起随仓库与官方 Release 完整发布 ─────────────
+# Wallpaper Engine 工坊场景 3808922316 渲染的人物视频、海报与图层随仓库入库；
+# 权利归各自权利人，代码 MIT 不覆盖素材，边界见 THIRD-PARTY-NOTICES.md。
+# 素材不再从本文件排除：lib/assets/ 下的文件按 git 正常跟踪。
+
+# 根目录演示视频（本机录制的展示片，不随仓库分发；只匹配仓库根层）
+/*.mp4
 
 # ── 系统与编辑器 ──────────────────────────────────────────────
 .DS_Store

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * 公开仓库门禁：本机路径、凭据、第三方媒体、内部产物、版本漂移、断链。
+ * 公开仓库门禁：本机路径、凭据、内部产物、素材齐全、版本漂移、断链。
+ * 素材自 0.6.1 起随仓库与 Release 完整发布：不再检查「未跟踪媒体」，
+ * 改为检查「16 个人物素材都已入库」。
  * 需要在 git 仓库内运行（CI 在 checkout 后执行）。
  */
 import { execFileSync } from 'node:child_process'
@@ -68,13 +70,6 @@ ok('没有把本机路径/用户名/凭据写进公开文件', () => {
   }
 })
 
-ok('没有跟踪第三方人物素材（程序化音频除外）', () => {
-  const mediaPattern = /^lib\/assets\/(?!audio\/)[^/]+\.(?:mp4|webm|webp|jpg|jpeg|png|mp3|woff2|gif)$/i
-  const layersPattern = /^lib\/assets\/layers\//i
-  const found = tracked.filter((file) => mediaPattern.test(file) || layersPattern.test(file))
-  if (found.length) throw new Error(found.join(', '))
-})
-
 ok('没有跟踪内部开发目录', () => {
   const internal = tracked.filter((file) =>
     /^(?:_p\d+|_shots[^/]*|_build|_integration|_backup|_notes|_work)\//.test(file) ||
@@ -92,7 +87,7 @@ ok('版本号在 package / release / 文档 / 测试之间一致', () => {
   if (manifest.tag !== 'v' + VERSION) throw new Error('release.json tag 不一致')
   if (manifest.name !== PKG.name) throw new Error('release.json name 不一致')
   if (manifest.asset !== `${PKG.name}-${VERSION}.tgz`) throw new Error('release.json asset 不一致')
-  if (manifest.mediaIncluded !== false) throw new Error('release.json 必须声明 mediaIncluded=false')
+  if (manifest.mediaIncluded !== true) throw new Error('release.json 必须声明 mediaIncluded=true')
 
   const splashTest = fs.readFileSync(path.join(ROOT, 'test/smoke-splash.mjs'), 'utf8')
   if (!splashTest.includes(`version ${VERSION}`) || !splashTest.includes(`iframe v=${VERSION}`)) {
@@ -172,9 +167,13 @@ ok('公开文件没有私钥/证书', () => {
   }
 })
 
-ok('source 包不夹带人物素材（构建脚本含断言）', () => {
-  const source = fs.readFileSync(path.join(ROOT, 'scripts/build-release.mjs'), 'utf8')
-  if (!source.includes('assertSourceHasNoMedia')) throw new Error('build-release.mjs 缺少素材断言')
+ok('source 包必须包含全部 16 个人物素材（构建脚本含断言）', () => {
+  const build = fs.readFileSync(path.join(ROOT, 'scripts/build-release.mjs'), 'utf8')
+  if (!build.includes('assertHasAllMedia')) throw new Error('build-release.mjs 缺少素材齐全断言')
+  const listed = [...build.matchAll(/'(lib\/assets\/[^']+)'/g)].map((match) => match[1])
+  if (listed.length !== 16) throw new Error(`build-release.mjs 素材清单应为 16 个，实际 ${listed.length}`)
+  const missing = listed.filter((file) => !tracked.includes(file))
+  if (missing.length) throw new Error('素材未入库: ' + missing.join(', '))
 })
 
 ok('仓库字节数在合理范围（< 40 MB）', () => {

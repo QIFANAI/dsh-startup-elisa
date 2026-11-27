@@ -6,13 +6,14 @@
 DeepSeek Harness（DSH）的**冷启动动画 + 客户端皮肤**插件：DSH 黑幕开幕 → ELISA 冷启动
 HUD → 设计化交接转场 → 主界面毛玻璃皮肤。音轨全部由本项目程序化合成。
 
-当前版本 **0.6.0（代号 FLOW）**，web profile 与 DeepSeek Harness Desktop 通用，
-零运行时依赖。
+当前版本 **0.6.1（完整素材开源版，代号 FLOW）**，web profile 与 DeepSeek Harness Desktop 通用，
+零运行时依赖。自 0.6.1 起，仓库与官方 Release 均包含完整 ELISA 人物素材。
 
-> 本仓库**不包含第三方人物素材**（Wallpaper Engine 工坊场景渲染的 ELISA 视频/海报/图层）。
-> 没有素材时插件按降级链继续运行；想还原完整观感，请按
-> [lib/assets/README.md](lib/assets/README.md) 自备**你有权使用**的素材。
-> 授权边界见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+> 本仓库与官方 Release **完整包含** ELISA 人物素材（Wallpaper Engine 工坊场景
+> 3808922316 渲染的视频 / 海报 / 图层），安装即得完整观感。素材权利归各自权利人，
+> **代码的 MIT 授权不覆盖素材**；再分发、商用或公开演示前请自行确认授权，权利人异议可开 Issue。
+> 权利边界见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)，素材规格见
+> [lib/assets/README.md](lib/assets/README.md)。
 
 ![玻璃皮肤 · 空会话](docs/screenshots/glass-empty-g100.png)
 
@@ -41,10 +42,10 @@ HUD → 设计化交接转场 → 主界面毛玻璃皮肤。音轨全部由本�
 ### 方式一：Release 安装包（推荐）
 
 从 [Releases](https://github.com/QIFANAI/dsh-startup-elisa/releases) 下载
-`dsh-startup-elisa-0.6.0.tgz` 与 `SHA256SUMS`，**完全退出 DSH**（含托盘）后：
+`dsh-startup-elisa-0.6.1.tgz` 与 `SHA256SUMS`，**完全退出 DSH**（含托盘）后：
 
 ```bash
-dsh plugin --profile desktop add ./dsh-startup-elisa-0.6.0.tgz
+dsh plugin --profile desktop add ./dsh-startup-elisa-0.6.1.tgz
 dsh plugin --profile desktop list
 ```
 
@@ -54,9 +55,9 @@ web profile 将 `desktop` 换成 `web`。若 `dsh` 不在 PATH，用 DSH 安装�
 也可以让脚本下载、校验并安装（Node 20+，不执行远程脚本）：
 
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/QIFANAI/dsh-startup-elisa/v0.6.0/scripts/install.mjs" -OutFile install-elisa.mjs
-node install-elisa.mjs --profile desktop --version 0.6.0 --dry-run
-node install-elisa.mjs --profile desktop --version 0.6.0
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/QIFANAI/dsh-startup-elisa/v0.6.1/scripts/install.mjs" -OutFile install-elisa.mjs
+node install-elisa.mjs --profile desktop --version 0.6.1 --dry-run
+node install-elisa.mjs --profile desktop --version 0.6.1
 ```
 
 ### 方式二：从源码构建
@@ -64,12 +65,12 @@ node install-elisa.mjs --profile desktop --version 0.6.0
 ```bash
 git clone https://github.com/QIFANAI/dsh-startup-elisa.git
 cd dsh-startup-elisa
-npm test           # 497 项冒烟（素材缺失时会跳过/改验优雅 404）
-npm run build      # 只打包 git 已跟踪文件 → releases/dsh-startup-elisa-0.6.0.tgz
-dsh plugin --profile desktop add ./releases/dsh-startup-elisa-0.6.0.tgz
+npm test           # 497 项冒烟（含完整素材的 Range / 图层断言；无素材时自动改验优雅 404）
+npm run build      # 打包 git 已跟踪文件（含完整素材）→ releases/dsh-startup-elisa-0.6.1.tgz
+dsh plugin --profile desktop add ./releases/dsh-startup-elisa-0.6.1.tgz
 ```
 
-无素材构建出的包同样可安装：启动层走静帧降级，皮肤与设置全部可用。
+官方包已含完整素材；即使素材被删或解码失败，启动层仍自动走静帧降级，皮肤与设置全部可用。
 
 ## 配置
 
@@ -142,8 +143,8 @@ file:///<仓库路径>/preview/index.html
 
 ```bash
 npm test                 # 497 项冒烟
-npm run check            # 公开仓库门禁：本机路径 / 凭据 / 媒体文件 / 版本一致性
-npm run build            # 可复现 source 包 → releases/*.tgz + SHA256SUMS
+npm run check            # 公开仓库门禁：本机路径 / 凭据 / 素材齐全 / 版本一致性
+npm run build            # 可复现发布包（含完整素材）→ releases/*.tgz + SHA256SUMS
 npm run verify:release   # 重建并与 release.json 比对
 ```
 
@@ -164,5 +165,7 @@ npm run verify:release   # 重建并与 release.json 比对
 
 ## 授权
 
-代码以 [MIT](LICENSE) 发布。第三方人物素材不在 MIT 范围内、不随仓库分发；
-程序化音频随代码授权。详见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+代码以 [MIT](LICENSE) 发布。ELISA 人物视频、海报与图层随仓库与官方 Release 完整发布，
+**不在 MIT 范围内**，权利归各自权利人；程序化音频随代码授权。再分发、商用或公开演示前
+请自行确认你有权使用；若你是权利人并认为随附发布不当，可开 Issue 联系维护者处理。
+详见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。

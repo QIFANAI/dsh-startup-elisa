@@ -2,8 +2,9 @@
 /**
  * 构建可复现的发布包。
  *
- * source 模式只复制 git 已跟踪文件，因此工作区里躺着的人物素材不会混进公开 Release；
- * full 模式供维护者本地验证完整声画，产物带 -full 后缀（禁止上传）。
+ * 自 0.6.1 起仓库本身包含完整人物素材（16 个文件），source 模式复制 git 已跟踪文件
+ * 即为完整版，公开 Release 与仓库逐字节一致；full 模式保留作兼容，从工作区 files
+ * 白名单重建 -full 包。
  */
 import { execFileSync } from 'node:child_process'
 import crypto from 'node:crypto'
@@ -18,12 +19,23 @@ const VERSION = PKG.version
 const NAME = PKG.name
 const REPO = 'QIFANAI/dsh-startup-elisa'
 const FIXED_TIME = new Date('1985-10-26T08:15:00.000Z')
-const MEDIA_PATTERN = /^lib\/assets\/(?!audio\/).+\.(?:mp4|webm|webp|jpg|jpeg|png|mp3|gif|woff2)$/i
-const LAYER_PATTERN = /^lib\/assets\/layers\//i
-const REQUIRED_MEDIA = [
+const MEDIA_FILES = [
   'lib/assets/hero-loop.mp4',
   'lib/assets/hero-poster.webp',
   'lib/assets/archive-poster.webp',
+  'lib/assets/layers/feather_1.webp',
+  'lib/assets/layers/feather_2.webp',
+  'lib/assets/layers/guide_1.webp',
+  'lib/assets/layers/guide_2.webp',
+  'lib/assets/layers/guide_3.webp',
+  'lib/assets/layers/halo.webp',
+  'lib/assets/layers/spiral_1.webp',
+  'lib/assets/layers/spiral_2.webp',
+  'lib/assets/layers/spiral_line.webp',
+  'lib/assets/layers/star.webp',
+  'lib/assets/layers/sword_flare.webp',
+  'lib/assets/layers/wing_1.webp',
+  'lib/assets/layers/wing_2.webp',
 ]
 
 function parseArgs (argv) {
@@ -72,9 +84,9 @@ function trackedFiles () {
 }
 
 /**
- * source 模式只复制 git 已跟踪文件，并把文本行尾统一成 LF（与 git blob 一致）：
- * 工作区里躺着的第三方素材/未跟踪文件不会混进公开包，Windows 本地构建与
- * Linux CI 的产物也能保持一致。
+ * source 模式复制 git 已跟踪文件，并把文本行尾统一成 LF（与 git blob 一致）：
+ * 自 0.6.1 起素材已入库，source 包必须包含全部人物素材；Windows 本地构建与
+ * Linux CI 的产物保持一致。
  */
 function exportHead (stage) {
   const files = trackedFiles()
@@ -132,7 +144,7 @@ function normalizeRelease (manifest) {
     sha256: manifest.sha256,
     sha512: manifest.sha512,
     url: `https://github.com/${REPO}/releases/download/v${VERSION}/${NAME}-${VERSION}.tgz`,
-    mediaIncluded: false,
+    mediaIncluded: true,
     install: {
       node: PKG.engines?.node || '>=20',
       profiles: ['desktop', 'web'],
@@ -140,30 +152,20 @@ function normalizeRelease (manifest) {
   }
 }
 
-function assertSourceHasNoMedia (files) {
-  const media = files
-    .map((file) => file.path)
-    .filter((file) => MEDIA_PATTERN.test(file) || LAYER_PATTERN.test(file))
-  if (media.length) {
-    throw new Error('source 包混入人物素材: ' + media.join(', '))
-  }
-}
-
-function assertFullHasMedia (files) {
+function assertHasAllMedia (files) {
   const paths = new Set(files.map((entry) => entry.path))
-  for (const required of REQUIRED_MEDIA) {
-    if (!paths.has(required)) throw new Error('full 包缺少 ' + required)
+  const missing = MEDIA_FILES.filter((file) => !paths.has(file))
+  if (missing.length) {
+    throw new Error('发布包缺少人物素材（必须 16 个）: ' + missing.join(', '))
   }
-  const layers = files.filter((entry) => /^lib\/assets\/layers\/.+\.webp$/i.test(entry.path))
-  if (!layers.length) throw new Error('full 包缺少 layers/*.webp')
 }
 
 function main () {
   const opts = parseArgs(process.argv.slice(2))
   if (opts.help) {
     console.log('用法: node scripts/build-release.mjs [--mode source|full] [--write-manifest] [--verify-manifest]')
-    console.log('  source  只打包 git 已跟踪文件（公开 Release 用）')
-    console.log('  full    打包当前工作区的完整声画（只在本机验证，不要上传）')
+    console.log('  source  打包 git 已跟踪文件（公开 Release 用，含完整人物素材）')
+    console.log('  full    从工作区 files 白名单重建 -full 包（兼容保留，内容与 source 相同）')
     return
   }
 
@@ -187,8 +189,7 @@ function main () {
       : `${NAME}-${VERSION}-full.tgz`
     const target = path.join(outDir, targetName)
 
-    if (opts.mode === 'source') assertSourceHasNoMedia(info.files)
-    else assertFullHasMedia(info.files)
+    assertHasAllMedia(info.files)
 
     fs.rmSync(target, { force: true })
     fs.copyFileSync(generated, target)
@@ -240,7 +241,6 @@ function main () {
       console.log(`[OK] ${path.relative(ROOT, target)}`)
       console.log(`  ${size} B / ${info.files.length} files`)
       console.log(`  sha256 ${sha256}`)
-      if (opts.mode === 'full') console.log('  full 包含第三方声画，只许本机使用，禁止上传')
     }
   } finally {
     fs.rmSync(stage, { recursive: true, force: true })

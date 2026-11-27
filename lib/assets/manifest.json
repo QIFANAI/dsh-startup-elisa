@@ -4,7 +4,7 @@
   "source": {
     "scene_pkg": "<维护者本机 Wallpaper Engine 场景路径，未随仓库分发>",
     "renderer": "we-static-frame (build-time only)",
-    "license": "Steam Workshop 第三方素材；仅本机自用，禁止售卖/公开分发人物渲染与海报"
+    "license": "Steam 创意工坊场景 3808922316 的第三方渲染素材；自 0.6.1 起随仓库与 Release 完整发布，权利归各自权利人，代码 MIT 不覆盖素材；再分发前请自行确认授权"
   },
   "video": {
     "file": "hero-loop.mp4",

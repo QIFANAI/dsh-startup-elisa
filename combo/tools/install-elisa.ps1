@@ -1,5 +1,5 @@
 ﻿# ============================================================================
-#  dsh-startup-elisa 0.6.0 —— 无损安装器（「Elisa启动动画+UI皮肤组合包」内）
+#  dsh-startup-elisa 0.6.1 —— 无损安装器（「Elisa启动动画+UI皮肤组合包」内）
 #
 #  用法（普通用户 / DSH 代理都适用）：
 #    powershell -NoProfile -ExecutionPolicy Bypass -File install-elisa.ps1
@@ -27,8 +27,8 @@ $ErrorActionPreference = 'Stop'
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 
 $PkgName         = 'dsh-startup-elisa'
-$ExpectedVersion = '0.6.0'
-$TgzName         = 'dsh-startup-elisa-0.6.0.tgz'
+$ExpectedVersion = '0.6.1'
+$TgzName         = 'dsh-startup-elisa-0.6.1.tgz'
 # 期望值由包内「校验清单.sha256」提供（构建时从同一 tgz 生成）；无外部锚点时以清单为准
 $ExpectedTgzSha  = $null
 $ExpectedTgzSize = 0
@@ -251,7 +251,7 @@ function Get-CliText([string]$cli, [string[]]$cliArgs) {
 # 启动
 # ============================================================================
 SayC "================================================================" 'Cyan'
-SayC " dsh-startup-elisa 0.6.0 无损安装器" 'Cyan'
+SayC " dsh-startup-elisa 0.6.1 无损安装器" 'Cyan'
 SayC "================================================================" 'Cyan'
 
 try { Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop } catch { }

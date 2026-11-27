@@ -1,11 +1,12 @@
-# dsh-startup-elisa 安装与排错（v0.6.0）
+# dsh-startup-elisa 安装与排错（v0.6.1）
 
 ## 适用范围
 
 - Windows 11 + DeepSeek Harness `0.2.1-rc.5`（rc.3 兼容，API 未变）；web profile 与
   Electron desktop 通用。
-- 公开 Release 是 **source 包**：代码、测试、文档、程序化音轨；**不含人物视频、海报与图层**。
-  人物素材只限本机自用，禁止上传或公开分发（见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)）。
+- 官方 Release 与仓库一致：代码、测试、文档、程序化音轨，**并包含完整人物视频、海报与图层**
+  （自 0.6.1 起）。素材权利归各自权利人，代码 MIT 不覆盖素材；再分发前请自行确认授权
+  （见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)）。
 - 同一 profile 只能启用一个启动插件；安装前确认 nostromo / yomi / screen 等已卸载或停用。
 
 ## 安装前备份（可选但推荐）
@@ -22,29 +23,29 @@ Copy-Item -LiteralPath "$p\node_modules\dsh-startup-elisa" -Destination "$b\dsh-
 
 1. **完全退出 DSH**，包括托盘进程。
 2. 从 [Releases](https://github.com/QIFANAI/dsh-startup-elisa/releases) 下载
-   `dsh-startup-elisa-0.6.0.tgz` 与 `SHA256SUMS`，先校验：
+   `dsh-startup-elisa-0.6.1.tgz` 与 `SHA256SUMS`，先校验：
 
    ```powershell
    # Windows
-   (Get-FileHash .\dsh-startup-elisa-0.6.0.tgz -Algorithm SHA256).Hash.ToLower()
+   (Get-FileHash .\dsh-startup-elisa-0.6.1.tgz -Algorithm SHA256).Hash.ToLower()
    # 与 SHA256SUMS 里第一列一致
    ```
 
 3. 安装（`dsh` 不在 PATH 时用 DSH 安装目录下的 `resources/runtime/cli/bin/dsh.cmd`）：
 
    ```powershell
-   dsh plugin --profile desktop add .\dsh-startup-elisa-0.6.0.tgz
+   dsh plugin --profile desktop add .\dsh-startup-elisa-0.6.1.tgz
    dsh plugin --profile desktop list
    ```
 
    也可让脚本下载并校验安装：
 
    ```powershell
-   node scripts/install.mjs --profile desktop --version 0.6.0 --dry-run
-   node scripts/install.mjs --profile desktop --version 0.6.0
+   node scripts/install.mjs --profile desktop --version 0.6.1 --dry-run
+   node scripts/install.mjs --profile desktop --version 0.6.1
    ```
 
-4. 应看到 `dsh-startup-elisa@0.6.0`，且 profile 的 `dsh.profile.bundles` 含
+4. 应看到 `dsh-startup-elisa@0.6.1`，且 profile 的 `dsh.profile.bundles` 含
    `dsh-startup-elisa`。
 5. 重新打开 DSH。默认 80% 速度下的时序（动画秒是契约值，墙钟 = 动画秒 ÷ 0.8）：
 
@@ -60,10 +61,11 @@ Copy-Item -LiteralPath "$p\node_modules\dsh-startup-elisa" -Destination "$b\dsh-
 
 ## 素材
 
-公开包没有人物素材时：启动层自动走 `no-video` 静帧分支，HUD、交接、音轨、皮肤与设置
-全部正常，不报错。要还原完整观感，请按 [lib/assets/README.md](lib/assets/README.md)
-自备**你有权使用**的 `hero-loop.mp4` / `hero-poster.webp` / `archive-poster.webp` /
-`layers/*.webp`，再重新构建安装包。
+官方包已含完整人物素材，安装即得完整观感。若删掉或替换素材：启动层自动走 `no-video`
+静帧分支，HUD、交接、音轨、皮肤与设置全部正常，不报错。要换自己的素材，请按
+[lib/assets/README.md](lib/assets/README.md) 的命名与规格放入**你有权使用**的
+`hero-loop.mp4` / `hero-poster.webp` / `archive-poster.webp` / `layers/*.webp`，
+再重新构建安装包。
 
 ## 配置
 
@@ -77,7 +79,7 @@ DSH 设置 →「ELISA 启动动画」，分组为播放 / 声音 / 外观皮肤
 
 ```powershell
 $env:DSH_HOME = "$env:TEMP\dsh-elisa-test"
-dsh plugin --profile web add .\releases\dsh-startup-elisa-0.6.0.tgz
+dsh plugin --profile web add .\releases\dsh-startup-elisa-0.6.1.tgz
 dsh web    # 用完后删除该目录
 ```
 
@@ -136,8 +138,8 @@ dsh plugin --profile desktop remove dsh-startup-elisa
   放行，不会卡死。视频在动画 6.0s 处冻结最后一帧，属设计行为。
 - **播放两个启动动画**：同一 profile 还有 nostromo / yomi / screen；先卸载其他启动插件。
 - **iframe 不显示**：确认 `/dsh-elisa/preview/index.html` 返回 200、`/dsh-elisa/lib/audio.js`、
-  `/dsh-elisa/skin.css` 返回 200；`/dsh-elisa/lib/assets/hero-loop.mp4` 在自备素材后应返回 200
-  且支持 Range。
+  `/dsh-elisa/skin.css` 返回 200；`/dsh-elisa/lib/assets/hero-loop.mp4` 应返回 200
+  且支持 Range（官方包含素材）。
 - **HUD 字段是 `—` 或短暂 `SYNCING`**：对应宿主 facts 未提供；启动层会在 3 秒内轮询
   `/dsh-elisa/config`，取不到就保持 `—`，不影响播放。
 - **desktop 出现 `Web authentication failed`**：与插件无关，是 Electron 默认会话 cookie

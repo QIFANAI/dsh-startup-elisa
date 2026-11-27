@@ -1,7 +1,8 @@
 # dsh-startup-elisa — DSH bundle patch
 #
 # Host 半侧挂进当前 profile；浏览器设置页由 package.json 的 dsh.client 组装。
-# 本包内嵌第三方人物素材，仅作本机自用，不发布到公共 registry。
+# 本包随仓库与官方 Release 完整发布第三方人物素材（权利归各自权利人，
+# 代码 MIT 不覆盖素材，边界见 THIRD-PARTY-NOTICES.md）。
 - insert:
     - id: dsh-startup-elisa
       name: dsh-startup-elisa

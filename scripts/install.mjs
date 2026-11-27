@@ -17,7 +17,7 @@ const NAME = 'dsh-startup-elisa'
 function usage () {
   console.log(`用法: node scripts/install.mjs [选项]
   --profile desktop|web   目标 profile（默认 desktop）
-  --version latest|0.6.0  指定版本（默认 latest）
+  --version latest|0.6.1  指定版本（默认 latest）
   --tgz <路径>            安装本地 tgz（需 --sha256 或 --allow-unverified）
   --sha256 <哈希>         本地 tgz 的 SHA-256
   --allow-unverified      允许安装未校验的本地 tgz
@@ -156,8 +156,8 @@ async function installRemote (opts) {
   if (manifestAsset) {
     manifest = JSON.parse(await getText(manifestAsset.browser_download_url))
     if (manifest.asset !== asset.name) throw new Error('release.json 与 Release 资产不一致')
-    if (manifest.mediaIncluded !== false) {
-      console.warn('[!] 该 Release 声明包含本地素材；请确认你有权使用')
+    if (manifest.mediaIncluded === true) {
+      console.warn('[!] 该 Release 含第三方人物素材：权利归各自权利人，代码 MIT 不覆盖，再分发前请自行确认授权')
     }
   }
   let sums = null

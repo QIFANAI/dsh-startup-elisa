@@ -204,7 +204,7 @@ r = await call('exact /dsh-elisa/config')
 let payload = JSON.parse(r.body.toString('utf8'))
 let cfg = payload.config
 check('config ok', () => assert.equal(payload.ok, true))
-check('版本 0.6.0', () => assert.equal(payload.version, '0.6.0'))
+check('版本 0.6.1', () => assert.equal(payload.version, '0.6.1'))
 check('默认 enabled', () => assert.equal(cfg.enabled, true))
 check('默认 mode', () => assert.equal(cfg.mode, 'session'))
 check('默认 allowSkip', () => assert.equal(cfg.allowSkip, true))
@@ -303,7 +303,8 @@ r = await call('exact /dsh-elisa/config', 'PUT')
 check('PUT 405', () => assert.equal(r.statusCode, 405))
 
 console.log('[7] 资源 Range 与目录穿越')
-/* 公开仓库不带第三方人物素材：有素材时跑完整 Range 断言，无素材时验优雅 404。 */
+/* 公开仓库与 Release 自 0.6.1 起带完整人物素材：有素材时跑完整 Range 断言，
+ * 素材被删时仍验优雅 404（降级链不允许因缺素材报错）。 */
 const HAS_VIDEO = fs.existsSync(path.join(PLUGIN_ROOT, 'lib/assets/hero-loop.mp4'))
 const HAS_LAYER = fs.existsSync(path.join(PLUGIN_ROOT, 'lib/assets/layers/wing_1.webp'))
 if (HAS_VIDEO) {
@@ -361,7 +362,7 @@ check('注入 root', () => assert.match(injected, /id="dsh-elisa-root"/))
 check('注入 splash.js', () => assert.match(injected, /\/dsh-elisa\/splash\.js/))
 check('注入 splash.css', () => assert.match(injected, /\/dsh-elisa\/splash\.css/))
 check('注入 config', () => assert.match(injected, /window\.__DSH_ELISA__/))
-check('注入版本 0.6.0', () => assert.match(injected, /window\.__DSH_ELISA_VERSION__="0\.6\.0"/))
+check('注入版本 0.6.1', () => assert.match(injected, /window\.__DSH_ELISA_VERSION__="0\.6\.1"/))
 check('注入 config 含 sound', () => assert.match(injected, /"sound":true/))
 check('注入 config 含 volume', () => assert.match(injected, /"volume":65/))
 check('注入 config 含 skin', () => assert.match(injected, /"skin":"glass"/))
